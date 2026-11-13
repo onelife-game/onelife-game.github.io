@@ -605,7 +605,7 @@ title=function(){
   const t=$('#title');t.classList.remove('hidden');
   let hasSave=false;try{hasSave=!!localStorage.getItem(SAVE_KEY);}catch(e){}
   const tn=Object.keys(META.titles).length;const sx=chance(.5)?'M':'F';const lk=newLook(sx);
-  const sprites=[[1,'baby'],[8,'kid'],[16,'school'],[28,sx==='F'?'office':'suit'],[80,'elder']].map(([a,of])=>`<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:${a<3?36:a<12?42:48}px;height:${a<3?39:a<12?57:72}px">${chibi({look:lk,age:a,outfit:of,mood:'happy',cane:a>=80})}</div><span style="font-size:12px;color:var(--gr)">${a}</span></div>`).join('');
+  const TK=innerWidth>=1000?2:innerWidth>=600?1.6:1;const sprites=[[1,'baby'],[8,'kid'],[16,'school'],[28,sx==='F'?'office':'suit'],[80,'elder']].map(([a,of])=>`<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:${(a<3?36:a<12?42:48)*TK}px;height:${(a<3?39:a<12?57:72)*TK}px">${chibi({look:lk,age:a,outfit:of,mood:'happy',cane:a>=80})}</div><span style="font-size:12px;color:var(--gr)">${a}</span></div>`).join('');
   let dots='';for(let i=0;i<100;i++)dots+=`<i style="display:block;aspect-ratio:1;background:${i===0?'var(--lime)':'var(--ln)'}"></i>`;
   t.innerHTML=`<div style="min-height:100%;display:flex;flex-direction:column;padding:34px 22px 26px">
    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gr)"><span>LIFE SIMULATION</span><span>&copy;2026</span></div>
@@ -668,3 +668,4 @@ makeShareCard=async function(){
   c.fillStyle=LIME;c.fillRect(0,H-96,W,96);c.fillStyle=BG;c.font=`30px ${DG}`;c.fillText(`#${GAME_TAG}`,64,H-38);c.textAlign='right';c.fillText('あなたの人生は、どうなる？',W-64,H-38);c.textAlign='left';
   return cv;
 };
+window.addEventListener('resize',()=>{try{if(S)renderScene();}catch(e){}});

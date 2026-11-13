@@ -275,17 +275,18 @@ function bgNow(){
 function renderScene(){
   const el=$('#scene');if(!el)return;
   const items=[];
-  const add=(svg,w,h,x,y)=>items.push(`<div class="ch" style="width:${w}px;height:${h}px;left:${x}%;bottom:${y}px">${svg}</div>`);
+  const K=Math.max(1,(el.clientHeight||138)/138);
+  const add=(svg,w,h,x,y)=>items.push(`<div class="ch" style="width:${w*K}px;height:${h*K}px;left:${x}%;bottom:${y*K}px">${svg}</div>`);
   // 家族
   const withFam=S.home==='jikka'||S.age<18;
   let left=[],right=[];
   if(S.spouse&&S.spouse.alive!==false)right.push(personSVG(S.spouse,S.spouse.age,S.spouse.close>60?'happy':S.spouse.close<25?'angry':'normal',S.spouse.of));
   S.kids.filter(k=>!k.indep&&!k.away&&k.alive!==false).slice(0,3).forEach(k=>left.push(personSVG(k,k.age,k.close>70?'happy':'normal')));
   if(withFam){livingParents().forEach(p=>right.push(personSVG(p,p.age,'normal',p.age>=65?'elder':p.job.includes('医')?'nurse':'casual')));S.fam.sibs.filter(s=>s.alive&&S.age-0>=0&&s.age+S.age>=0&&!s.left).slice(0,2).forEach(s=>left.push(personSVG(s,Math.max(0,S.age+s.age),'normal')));}
-  const main=`<div class="ch me" style="width:80px;height:120px;left:50%;bottom:6px;transform:translateX(-50%)">${playerSVG()}</div>`;
+  const main=`<div class="ch me" style="width:${80*K}px;height:${120*K}px;left:50%;bottom:${6*K}px;transform:translateX(-50%)">${playerSVG()}</div>`;
   left.slice(0,3).forEach((svg,i)=>add(svg,56,84,30-i*13,8));
   right.slice(0,3).forEach((svg,i)=>add(svg,56,84,57+i*13,8));
-  if(S.pet)items.push(`<div class="ch" style="width:44px;height:36px;left:${S.kids.length?6:20}%;bottom:6px">${catSVG()}</div>`);
+  if(S.pet)items.push(`<div class="ch" style="width:${44*K}px;height:${36*K}px;left:${S.kids.length?6:20}%;bottom:${6*K}px">${catSVG()}</div>`);
   el.innerHTML=`<div class="bg">${sceneSVG(bgNow())}</div>${items.join('')}${main}`;
 }
 
