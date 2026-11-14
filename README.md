@@ -1,5 +1,4 @@
-# ONE LIFE
+# ONE LIFE / 漂流30日
 
-人生は、一度きり。0歳から寿命が尽きるまで、1年ずつ選んでいく超リアル人生ゲーム。
-
-https://onelife-game.github.io/
+- ONE LIFE（人生は、一度きり。超リアル人生ゲーム）: https://onelife-game.github.io/
+- 漂流30日（無人島で、30日間生き延びろ。）: https://onelife-game.github.io/drift/
