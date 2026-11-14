@@ -216,6 +216,7 @@ textarea,select{background:var(--win)!important;color:var(--fg)!important;border
 <script src="actions.js"></script>
 <script src="events.js"></script>
 <script src="extra.js"></script>
+<script src="support.js"></script>
 <script>
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{if(!S)return;TAB=b.dataset.t;render();$('#main').scrollTop=0;});
 $('#nextBtn').onclick=()=>{if(S&&!S.ended){S.lastRes=null;nextYear();}$('#main').scrollTop=0;};

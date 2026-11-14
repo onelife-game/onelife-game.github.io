@@ -477,7 +477,7 @@ coverShortfall=function(){_coverShortfall();if(S.age>=65&&S.debt>200&&['none','p
 // =====================================================================
 const GAME_NAME='ONE LIFE';
 const GAME_TAG='ONELIFE';
-const GAME_URL=(()=>{try{const h=location.hostname;if(/^https?:$/.test(location.protocol)&&h&&!/claude|anthropic|usercontent/.test(h))return location.origin+location.pathname.replace(/index\.html$/,'');}catch(e){}return 'https://claude.ai/artifact/8UEAZe6NP3TVEh3ddgQr5N';})();
+const GAME_URL='https://onelife-game.github.io/'; // 投稿サイト（ふりーむ・itch.io等）から遊んでも、シェアは公式サイトへ
 function lifeSummary(){
   const a=assetsTotal();const got=TITLES.filter(t=>t.c(a)).sort((x,y)=>y.p-x.p);const main=got[0];
   const era=ERAS[S.era||'now'];
