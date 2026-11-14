@@ -108,8 +108,8 @@ function priceTag(a){const m=S.offerPrice&&S.offerPrice[a.id];if(!m)return '';re
 // 3) 選択肢ごとの隠れた運（人生ごとに変わる）
 // ---------------------------------------------------------------------
 function fateOf(id){S.fate=S.fate||{};if(!S.fate[id])S.fate[id]=wpk({curse:15,bless:15,normal:70});return S.fate[id];}
-function stageOf(a){return a<13?0:a<23?1:a<40?2:a<60?3:4;}
-function tide(){S.tides=S.tides||[0,1,2,3,4].map(()=>wpk({'-1':3,'0':4,'1':3})|0);return +S.tides[stageOf(S.age)];}
+function lifeStage(a){return a<13?0:a<23?1:a<40?2:a<60?3:4;}
+function tide(){S.tides=S.tides||[0,1,2,3,4].map(()=>wpk({'-1':3,'0':4,'1':3})|0);return +S.tides[lifeStage(S.age)];}
 function luckRoll(id){
   const f=fateOf(id),t=tide()*.06;
   let bad=f==='curse'?.5:f==='bless'?.03:.1,good=f==='bless'?.45:f==='curse'?.03:.08;

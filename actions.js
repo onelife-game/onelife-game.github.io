@@ -64,7 +64,7 @@ function actionsPanel(){
       b.onclick=()=>{if(S.used[x.id])return;if(S.cash<c){toast('お金が足りない');return;}S.used[x.id]=1;if(c)pay(c,x.n);const r=fateTwist(x,x.f());if(r){S.notes.push(r);S.lastRes=r;}render();$('#main').scrollTop=0;};g.appendChild(b);});
     wrap.appendChild(s);
   }
-  {const cs=chanceSection();if(cs)wrap.appendChild(cs);}
+  {const cs=chanceSection();if(cs)wrap.appendChild(cs);(window.EXTRA_SECS||[]).forEach(f=>{try{const e=f();if(e)wrap.appendChild(e);}catch(er){console.warn(er);}});}
   const sh=SHEETS.filter(x=>a>=x.a[0]&&a<=x.a[1]&&(!x.c2||x.c2()));
   if(sh.length){const s=document.createElement('div');s.className='sec';s.innerHTML=`<h3>人生を動かす</h3><div class="acts"></div>`;const g=s.querySelector('.acts');
     sh.forEach(x=>{const b=document.createElement('button');b.className='act';b.innerHTML=`${x.n}<small>${x.d}</small>`;b.onclick=x.f;g.appendChild(b);});wrap.appendChild(s);}

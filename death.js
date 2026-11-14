@@ -98,6 +98,12 @@ async function playDeath(cause){
       stage.innerHTML=`<div class="mem"><div class="chr" style="opacity:1;animation:none">${charAt(m.age,'happy')}</div><div class="age">${m.age}歳</div><div style="font-size:16px">${m.t}</div></div>`;
       await wait(1900);if(skipAll)throw 0;
     }
+    // ③' 自分が書き残した言葉
+    const DY=(S.diary||[]).filter(d=>d.kind!=='最期の言葉');
+    if(DY.length){clear();line('あなたが書き残した言葉','sm',0);
+      const pickD=DY.length<=3?DY:[DY[0],DY[Math.floor(DY.length/2)],DY[DY.length-1]];
+      pickD.forEach((d,i)=>line(`<span style="color:#C7F94B;font-size:12px">${d.age}歳　${d.kind}</span><br>「${esc(d.t)}」`,'',800+i*1600));
+      await wait(1800+pickD.length*1700);if(skipAll)throw 0;}
     // ④ 看取った人と最期の言葉
     clear();const W=watchers();
     if(W.length){line('最期にそばにいたのは','sm',0);
@@ -105,7 +111,7 @@ async function playDeath(cause){
       box.innerHTML=W.map((w,i)=>`<div style="animation-delay:${600+i*350}ms">${w.pet?'<div style="height:70px;line-height:70px;font-size:22px;color:#ddd">ねこ</div>':(()=>{try{return personSVG(w.p,Math.max(0,w.p.age||0),'sad',w.p.of);}catch(e){return '';}})()}${w.lb}</div>`).join('');
       stage.appendChild(box);}
     else line('最期は、ひとりだった。','',0);
-    line(`「${lastWords()}」`,'',W.length?600+W.length*350+900:1600);
+    line(`「${S.lastWords?esc(S.lastWords):lastWords()}」`,'',W.length?600+W.length*350+900:1600);
     await wait(6200);if(skipAll)throw 0;
     // ⑤ 名前
     clear();
