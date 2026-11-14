@@ -267,12 +267,14 @@ D('drug_spiral',{a:[16,60],m:true,c:()=>S.vice.drug>0&&chance(.35),mk:()=>E('依
   O('手に入れて使う',()=>{S.vice.drug=Math.min(100,S.vice.drug+25);mod({health:-10,mental:-8});pay(10,'違法薬物');if(chance(.3)){arrest('違法薬物の使用');return '職務質問で見つかり、逮捕された。';}return 'やめられない。';}),
   O('依存症の専門外来に相談する',()=>{pay(5,'専門外来');if(chance(.5)){S.vice.drug=0;mod({mental:5});log('薬物をやめる');return '治療を受けて、手を切ることができた。';}return '治療を始めたが、まだ苦しい。';}),
   O('連絡先をすべて消す',()=>{if(chance(.4)){S.vice.drug=0;return 'もう二度と戻らないと誓った。';}return '数か月後、また連絡してしまった。';})])});
+// 施設・刑務所で過ごす間も、周りの人は同じように年をとる
+function passYears(n){S.flags.tryBaby=0;for(let i=0;i<n;i++){try{yearPeople();}catch(e){console.warn(e);}S.age++;S.year++;}}
 function arrest(what,yrs){S.crime=(S.crime||0)+1;log(`${what}で逮捕される`);mod({mental:-20,moral:-5});friends().forEach(f=>f.close-=20);parents().forEach(p=>p.close-=20);S.mood='shock';
   if(['正社員','公務員','専門職'].includes(J().cat)){setJob('none');S.notes.push('会社を懲戒解雇された。');}
   if(S.partner){S.exes.push(S.partner.name);S.partner=null;}
-  if(S.age<20){S.notes.push(yrs>=3?'少年院に送られ、1年を過ごした。':'家庭裁判所に送られ、保護観察処分になった。');if(yrs>=3){S.age+=1;S.year+=1;}return;}
+  if(S.age<20){S.notes.push(yrs>=3?'少年院に送られ、1年を過ごした。':'家庭裁判所に送られ、保護観察処分になった。');if(yrs>=3){passYears(1);}return;}
   if(yrs==null)yrs=chance(.5)?0:2;
-  if(!yrs){pay(50,'弁護士費用');S.notes.push('執行猶予つきの判決が出た。');}else{S.notes.push(`懲役${yrs}年の判決を受け、刑務所で${yrs}年を過ごした。`);S.age+=yrs;S.year+=yrs;S.flags.prison=1;if(S.spouse&&chance(.5)){S.notes.push(`${S.spouse.name}から離婚届が届いた。`);S.exes.push(S.spouse.name);S.spouse=null;}}}
+  if(!yrs){pay(50,'弁護士費用');S.notes.push('執行猶予つきの判決が出た。');}else{S.notes.push(`懲役${yrs}年の判決を受け、刑務所で${yrs}年を過ごした。`);passYears(yrs);S.flags.prison=1;if(S.spouse&&chance(.5)){S.notes.push(`${S.spouse.name}から離婚届が届いた。`);S.exes.push(S.spouse.name);S.spouse=null;}}}
 D('bunkasai',{a:[15,17],w:3,cd:2,mk:()=>E('文化祭','文化祭で何をやる？',[
   O('バンドを組んでステージに立つ',()=>{mod({comm:5,charm:4,skill:3});if(S.talent==='music'){S.flags.talentKnown=1;return '体育館が揺れるほど盛り上がった。';}return 'ミスだらけだったが、最高の思い出になった。';}),
   O('漫才コンテストに出る',()=>{mod({comm:6});if(S.talent==='comedy'){S.flags.talentKnown=1;return '全校が爆笑した。お笑いの道を本気で考え始めた。';}return 'すべった。';}),
@@ -429,26 +431,26 @@ D('dekichatta',{a:[16,40],w:2,cd:6,c:()=>S.partner&&!S.spouse&&!S.partner.preg&&
   O(me?'結婚はせず、一人で産んで育てる':'認知して、養育費を払う',()=>{const k=newKid();k.age=-1;k.single=1;if(me){S.kids.push(k);S.exes.push(p.name);S.partner=null;S.flags.singleMom=1;mod({mental:-6});log('シングルマザーになる');return 'ひとりで育てると決めた。児童扶養手当の申請書をもらってきた。';}k.away=true;k.indep=false;S.kids.push(k);S.yoiku=(S.yoiku||0)+36;S.exes.push(p.name);S.partner=null;return '結婚はしなかった。毎月3万円の養育費を払うことになった。';}),
   O('二人でよく話し合い、産まないことを選ぶ',()=>{pay(15,'手術費用');mod({mental:-12});p.close-=10;return 'つらい決断だった。しばらく二人とも口数が少なかった。';}),
   O(me?'相手の親に相談する':'逃げる',()=>{if(me){if(chance(.5)){marry();const k=newKid();k.age=-1;S.kids.push(k);return '相手の親が強く背中を押し、結婚することになった。';}S.exes.push(p.name);S.partner=null;const k=newKid();k.age=-1;S.kids.push(k);S.flags.singleMom=1;return '相手は消えた。ひとりで産むことになった。';}S.exes.push(p.name);S.partner=null;S.yoiku=(S.yoiku||0)+36;mod({moral:-20});return '連絡を絶った。数年後、家庭裁判所から養育費の請求が届いた。';})],W(p));}});
-D('ikukyu',{a:[20,55],m:true,c:()=>S.kids.some(k=>k.age===0&&!k.ikq)&&['正社員','公務員','専門職'].includes(J().cat),mk:()=>{const k=S.kids.find(k=>k.age===0&&!k.ikq);k.ikq=1;return E('育休',`${k.name}が生まれた。育休を取る？`,[
+D('ikukyu',{a:[20,55],m:true,c:()=>S.kids.some(k=>k.alive!==false&&k.age===0&&!k.ikq)&&['正社員','公務員','専門職'].includes(J().cat),mk:()=>{const k=S.kids.find(k=>k.alive!==false&&k.age===0&&!k.ikq);k.ikq=1;return E('育休',`${k.name}が生まれた。育休を取る？`,[
   O('1年しっかり取る',()=>{S.job.salary*=.97;k.close+=20;if(S.spouse)S.spouse.close+=15;mod({mental:5});return '育休を1年取った。毎日が子どもの成長でいっぱいだった。';}),
   O('1か月だけ取る',()=>{k.close+=8;if(S.spouse)S.spouse.close+=5;return '1か月だけ育休を取った。';}),
   O('仕事を優先する',()=>{if(S.spouse)S.spouse.close-=12;S.job.salary+=10;return '育休は取らなかった。';})],W(Object.assign({},k,{age:0})));}});
-D('hoikuen_ochi',{a:[20,55],m:true,c:()=>S.kids.some(k=>k.age===1&&!k.hoiku)&&S.spouse&&S.spouse.work,mk:()=>{const k=S.kids.find(k=>k.age===1&&!k.hoiku);k.hoiku=1;if(chance(.55))return null;return E('保育園',`${k.name}の保育園に落ちた。待機児童だ。`,[
+D('hoikuen_ochi',{a:[20,55],m:true,c:()=>S.kids.some(k=>k.alive!==false&&k.age===1&&!k.hoiku)&&S.spouse&&S.spouse.work,mk:()=>{const k=S.kids.find(k=>k.alive!==false&&k.age===1&&!k.hoiku);k.hoiku=1;if(chance(.55))return null;return E('保育園',`${k.name}の保育園に落ちた。待機児童だ。`,[
   O('認可外保育園に預ける',()=>{pay(60,'認可外保育園');return '月5万円の認可外保育園に預けた。';}),
   O('配偶者が仕事を辞める',()=>{S.spouse.work=false;return '配偶者が仕事を辞めた。';}),
   O('自分の親に頼る',()=>{livingParents().forEach(p=>p.close+=10);return '親が毎日来てくれることになった。';},'',livingParents().length>0),
   O('育休を延長する',()=>{S.job.salary*=.95;return '育休を延長した。';})]);}});
-D('kid_school',{a:[22,70],m:true,c:()=>S.kids.some(k=>k.age===6&&!k.schoolSet),mk:()=>{const k=S.kids.find(k=>k.age===6&&!k.schoolSet);k.schoolSet=1;return E('子ども',`${k.name}が小学生になる。`,[
+D('kid_school',{a:[22,70],m:true,c:()=>S.kids.some(k=>k.alive!==false&&k.age===6&&!k.schoolSet),mk:()=>{const k=S.kids.find(k=>k.alive!==false&&k.age===6&&!k.schoolSet);k.schoolSet=1;return E('子ども',`${k.name}が小学生になる。`,[
   O('近所の公立小学校',()=>'近所の公立小学校に通う。'),
   O('私立小学校を受験させる',()=>{pay(80,'受験準備');if(k.st.study+R()*40>40){k.priv=1;kidMod(k,{study:6});return '私立小学校に合格した。';}return '不合格。公立に通う。';},'受験準備で約80万円'),
   O('習い事をたくさんさせる',()=>{pay(30,'習い事');kidMod(k,{study:3,health:3});return 'スイミング、ピアノ、英語。週5日の習い事。';}),
   O('のびのび育てる',()=>{kidMod(k,{mental:6});return '放課後は友達と走り回っている。';})],W(k));}});
-D('kid_juken',{a:[25,75],m:true,c:()=>S.kids.some(k=>k.age===10&&!k.jk),mk:()=>{const k=S.kids.find(k=>k.age===10&&!k.jk);k.jk=1;return E('子どもの受験',`${k.name}が10歳になった。周りの子は中学受験の塾に通い始めている。${infoLink('juken')}`,[
+D('kid_juken',{a:[25,75],m:true,c:()=>S.kids.some(k=>k.alive!==false&&k.age===10&&!k.jk),mk:()=>{const k=S.kids.find(k=>k.alive!==false&&k.age===10&&!k.jk);k.jk=1;return E('子どもの受験',`${k.name}が10歳になった。周りの子は中学受験の塾に通い始めている。${infoLink('juken')}`,[
   O('中学受験させる',()=>{k.juku=1;k.priv=1;kidMod(k,{study:10,mental:-6});return `${k.name}は週5日、塾に通い始めた。`;},'塾代と私立の学費で数百万円'),
   O('本人に決めさせる',()=>{if(k.st.study>=50){k.juku=1;k.priv=1;kidMod(k,{study:8});return `${k.name}は自分から「受験したい」と言った。`;}kidMod(k,{mental:4});return `${k.name}は地元の中学に行きたいと言った。`;}),
   O('地元の公立中学に進ませる',()=>{kidMod(k,{mental:3});return '地元の公立中学に進む。';}),
   O('スポーツや芸術を伸ばす',()=>{kidMod(k,{health:8,mental:4});if(['sport','music','art'].includes(k.st.talent))kidMod(k,{study:2});return '好きなことに打ち込ませることにした。';})],W(k));}});
-D('kid_trouble',{a:[25,80],w:5,cd:3,c:()=>S.kids.some(k=>k.age>=12&&k.age<=18&&!k.indep),mk:()=>{const k=pick(S.kids.filter(k=>k.age>=12&&k.age<=18&&!k.indep));const t=pick(['夜遊び','反抗','いじめ','不登校','恋愛','進路']);
+D('kid_trouble',{a:[25,80],w:5,cd:3,c:()=>S.kids.some(k=>k.alive!==false&&k.age>=12&&k.age<=18&&!k.indep),mk:()=>{const k=pick(S.kids.filter(k=>k.alive!==false&&k.age>=12&&k.age<=18&&!k.indep));const t=pick(['夜遊び','反抗','いじめ','不登校','恋愛','進路']);
   const txt={夜遊び:`${k.name}が深夜になっても帰ってこない。`,反抗:`${k.name}が「うるせえ、ほっとけよ」と言って部屋にこもった。`,いじめ:`${k.name}が学校でいじめられているらしい。`,不登校:`${k.name}が「学校に行きたくない」と言い出した。`,恋愛:`${k.name}に恋人ができたらしい。成績が下がっている。`,進路:`${k.name}が「大学には行かない。○○になりたい」と言い出した。`}[t];
   return E('子ども',txt,[
    O('頭ごなしに叱る',()=>{k.close-=12;kidMod(k,{moral:3,mental:-6});return '家の中が冷え込んだ。';}),
@@ -457,12 +459,12 @@ D('kid_trouble',{a:[25,80],w:5,cd:3,c:()=>S.kids.some(k=>k.age>=12&&k.age<=18&&!
    O('学校や専門家に相談する',()=>{pay(5,'相談');kidMod(k,{mental:5});return 'カウンセラーが間に入ってくれた。';}),
    O('配偶者に任せる',()=>{if(S.spouse)S.spouse.close-=6;k.close-=6;return '「あなたの子でもあるのに」と言われた。';},'',!!S.spouse),
    O('お小遣いで釣る',()=>{pay(5,'お小遣い');kidMod(k,{moral:-3});k.close+=4;return 'その場は収まった。';})],W(k));}});
-D('kid_uni',{a:[30,85],m:true,c:()=>S.kids.some(k=>k.age===18&&!k.uniAsk),mk:()=>{const k=S.kids.find(k=>k.age===18&&!k.uniAsk);k.uniAsk=1;return E('子どもの進路',`${k.name}が18歳になった。学力は${Math.round(k.st.study)}。大学に行きたいと言っている。`,[
+D('kid_uni',{a:[30,85],m:true,c:()=>S.kids.some(k=>k.alive!==false&&k.age===18&&!k.uniAsk),mk:()=>{const k=S.kids.find(k=>k.alive!==false&&k.age===18&&!k.uniAsk);k.uniAsk=1;return E('子どもの進路',`${k.name}が18歳になった。学力は${Math.round(k.st.study)}。大学に行きたいと言っている。`,[
   O('学費を全額出す',()=>{k.uni=1;kidMod(k,{study:5});return `${k.name}の学費を出すことにした。`;},'4年で数百万円'),
   O('一人暮らしの費用まで出す',()=>{k.uni=2;kidMod(k,{study:5,mental:4});return `${k.name}は大学近くで一人暮らしを始めた。`;},'年200万円ほど'),
   O('奨学金を借りてもらう',()=>{kidMod(k,{study:4});k.close-=5;return `${k.name}は奨学金を借りて進学した。`;}),
   O('就職してほしい',()=>{k.close-=10;kidMod(k,{study:-5});return `${k.name}は就職することになった。`;})],W(k));}});
-D('kid_money',{a:[45,95],w:3,cd:5,c:()=>S.kids.some(k=>k.indep&&k.alive!==false),mk:()=>{const k=pick(S.kids.filter(k=>k.indep&&k.alive!==false));const big=k.tier>=3;return E('子ども',big?`${k.name}から「お父さん（お母さん）に家をリフォームしてあげたい」と連絡があった。`:`${k.name}から「ちょっとお金を貸してくれない？」と連絡があった。`,big?[
+D('kid_money',{a:[45,95],w:3,cd:5,c:()=>S.kids.some(k=>k.alive!==false&&k.indep&&k.alive!==false),mk:()=>{const k=pick(S.kids.filter(k=>k.alive!==false&&k.indep&&k.alive!==false));const big=k.tier>=3;return E('子ども',big?`${k.name}から「${S.sex==='M'?'お父さん':'お母さん'}に家をリフォームしてあげたい」と連絡があった。`:`${k.name}から「ちょっとお金を貸してくれない？」と連絡があった。`,big?[
   O('ありがたく受ける',()=>{gain(200,`${k.name}からの援助`);k.close+=5;S.mood='happy';return '立派になったものだと思った。';}),
   O('気持ちだけ受け取る',()=>{k.close+=10;return '「元気でいてくれればいい」と伝えた。';})]:[
   O('100万円を貸す',()=>{pay(100,`${k.name}に貸す`);k.close+=10;if(chance(.5)){S.queue.push(E('子ども',`${k.name}が借りたお金を返しに来た。`,[O('受け取る',()=>{gain(100,'返済');return '律儀な子に育ったものだ。';})]));}return 'お金を貸した。';}),
@@ -481,7 +483,7 @@ D('spouse_affair',{a:[25,70],w:2,cd:5,c:()=>S.spouse&&(S.spouse.pers==='浮気�
   O('探偵を雇う',()=>{pay(50,'探偵費用');if(sp.pers==='浮気性'||chance(.4)){divorce(false);gain(300,'慰謝料');return '証拠をそろえて離婚し、慰謝料を受け取った。';}return '調べたが、何も出てこなかった。';}),
   O('信じて何もしない',()=>{return '何も聞かなかった。';})],W(sp));}});
 function divorce(myFault){const sp=S.spouse;const hc=Math.max(0,S.cash*.5),hn=S.nisa.v*.5;S.nisa.v-=hn;S.nisa.basis*=.5;pay(hc,'財産分与');if(hn>0)row('財産分与（NISA分）',-hn);if(myFault)pay(Math.min(Math.max(0,S.cash),300),'慰謝料');log(sp.name+'と離婚');S.exes.push(sp.name);
-  const kids=S.kids.filter(k=>!k.indep&&k.alive!==false);
+  const kids=S.kids.filter(k=>k.alive!==false&&!k.indep&&k.alive!==false);
   if(kids.length){S.queue.unshift(E('親権','子どもの親権はどうする？',[O('自分が引き取る',()=>{if(sp.work)S.yoikuIn=kids.length*40;return '子どもは自分が育てることになった。';}),O('相手に任せる',()=>{kids.forEach(k=>{k.away=1;k.close-=25;});S.yoiku=kids.length*48;return '子どもとは月に一度会うことになった。養育費を払う。';})]));}
   S.spouse=null;S.flags.divorced=1;mod({mental:-20});S.mood='sad';if(S.home==='fam_23'||S.home==='fam_sub')S.home='normal';}
 D('jobwork',{a:[22,60],w:5,cd:2,c:()=>['正社員','公務員','専門職'].includes(J().cat),mk:()=>pick([
@@ -559,7 +561,7 @@ D('mental_down',{a:[20,65],w:3,cd:5,c:()=>S.st.mental<30,mk:()=>E('心','朝、�
   O('心療内科に行って休職する',()=>{S.job.salary*=.9;mod({mental:25});pay(5,'通院');return '3か月休んだ。少しずつ、日常が戻ってきた。';}),
   O('仕事を辞める',()=>{setJob('none');mod({mental:20});return '仕事を辞めた。休むことにした。';}),
   O('誰にも言わず無理を続ける',()=>{mod({mental:-10,health:-10});return '限界が近い。';}),
-  O('実家に帰る',()=>{S.home='jikka';mod({mental:18});return '実家で、母の作るご飯を食べた。';},'',S.fam.alive&&!S.spouse)])});
+  O('実家に帰る',()=>{S.home='jikka';mod({mental:18});const lp=livingParents();return lp.length?`実家で、${lp.find(p=>p.sex==='F')?'母':'父'}の作るご飯を食べた。`:'誰もいない実家で、子どもの頃の部屋に寝転んだ。';},'',S.fam.alive&&!S.spouse)])});
 D('gamble_inv',{a:[20,80],w:1,cd:6,c:()=>friends().length>0,mk:()=>{const f=pick(friends());return E('誘い',`${f.name}に「今日、京王閣で競輪やってるから行こうぜ」と誘われた。${infoLink('keirin')}`,[
   O('行く（5万円持って）',()=>{f.close+=8;return gambleRun(5,'中穴');}),
   O('大穴一点勝負（1万円）',()=>{f.close+=8;return gambleRun(1,'大穴');}),
@@ -612,8 +614,8 @@ D('care',{a:[30,80],m:true,c:()=>livingParents().some(p=>p.age>=76&&!p.care)&&ch
   O(S.fam.place==='local'?'仕事を辞めて地元に帰る':'仕事を辞めて介護に専念する',()=>{setJob('none');S.flags.caredParent=1;if(S.fam.place==='local'){S.flags.leftTokyo=1;log('介護のため地元へ帰る');}mod({mental:-10});return '仕事を辞めて、介護に専念することにした。';}),
   O('きょうだいに任せる',()=>{S.fam.sibs.forEach(s=>s.close-=20);p.close-=15;mod({mental:-5});return 'きょうだいに任せた。後ろめたさが残る。';},'',S.fam.sibs.some(s=>s.alive))],W(Object.assign({},p,{_mood:'sad'})));}});
 D('inherit_fight',{a:[30,95],m:true,c:()=>S.flags.inheritAsk,mk:()=>{const {lb,inh}=S.flags.inheritAsk;S.flags.inheritAsk=null;const n=S.fam.sibs.filter(s=>s.alive).length+1;const share=inh/n;
-  if(n===1){gain(inh,'相続');return E('相続',`両親が遺した財産、約${yen(inh)}をすべて相続した。`,[O('受け取る',()=>'実家の片付けをしながら、子どもの頃を思い出した。')]);}
-  return E('相続',`両親の遺産は約${yen(inh)}。きょうだいで分けることになった。`,[
+  if(n===1){gain(inh,'相続');return E('相続',`${parents().length>1?'両親':lb}が遺した財産、約${yen(inh)}をすべて相続した。`,[O('受け取る',()=>'実家の片付けをしながら、子どもの頃を思い出した。')]);}
+  return E('相続',`${parents().length>1?'両親':lb}の遺産は約${yen(inh)}。きょうだいで分けることになった。`,[
     O('法定相続分どおりに分ける',()=>{gain(share,'相続');return `${yen(share)}を相続した。`;}),
     O('介護をした分、多くもらいたいと主張',()=>{if(S.flags.caregive||S.flags.caredParent){gain(share*1.5,'相続');S.fam.sibs.forEach(s=>s.close-=10);return '話し合いの末、多めに受け取った。';}S.fam.sibs.forEach(s=>s.close-=30);gain(share,'相続');return 'もめにもめた。きょうだいとは疎遠になった。';}),
     O('きょうだいに譲る',()=>{S.fam.sibs.forEach(s=>s.close+=20);mod({moral:5});return '自分の分は譲った。';}),
@@ -639,7 +641,7 @@ D('rougo2000',{a:[65,66],m:true,c:()=>S.age===65,mk:()=>{const a=assetsTotal();r
   O('悠々自適に暮らす',()=>{if(['none'].includes(S.job.id))S.job.id='pension';S.mood='happy';return '好きなことをして暮らす。';}),
   O('世界一周旅行に出る',()=>{pay(300,'世界一周');mod({mental:20});S.mood='happy';return '3か月かけて世界を回った。';}),
   O('子や孫のために残す',()=>{S.life=Math.min(S.life,1);return '贅沢はせず、子どもたちのために残す。';})]);}});
-D('oreore',{a:[65,100],w:3,cd:5,mk:()=>{const k=S.kids.find(k=>k.indep);return E('電話',`「もしもし、俺だけど……${k?'':'（声がよく聞き取れない）'}会社のお金をなくしちゃって、今日中に300万円必要なんだ」${infoLink('sagi')}`,[
+D('oreore',{a:[65,100],w:3,cd:5,mk:()=>{const k=S.kids.find(k=>k.alive!==false&&k.indep);return E('電話',`「もしもし、俺だけど……${k?'':'（声がよく聞き取れない）'}会社のお金をなくしちゃって、今日中に300万円必要なんだ」${infoLink('sagi')}`,[
   O('すぐに振り込む',()=>{pay(Math.min(300,Math.max(0,S.cash)),'オレオレ詐欺');mod({mental:-15});S.mood='sad';return '後で本人に電話すると、何も知らなかった。詐欺だった。';}),
   O('一度切って、本人にかけ直す',()=>{mod({mental:3});return '本人は家にいた。詐欺だった。';}),
   O('警察に通報する',()=>{mod({moral:3});return '警察が受け子を捕まえた。';}),
@@ -649,7 +651,7 @@ D('menkyo_return',{a:[75,90],m:true,c:()=>S.lic&&S.age>=75&&!S.flags.henno,mk:()
   O('まだ運転する',()=>{if(chance(.15)){mod({health:-15});pay(100,'事故の賠償');return 'アクセルとブレーキを踏み間違え、店に突っ込んだ。';}return 'もう少しだけ運転を続けることにした。';})]);}});
 D('rojin',{a:[75,105],m:true,c:()=>S.st.health<40&&S.home!=='nursing'&&!S.flags.rojinAsk,mk:()=>{S.flags.rojinAsk=1;return E('老後','一人で暮らすのが難しくなってきた。',[
   O('有料老人ホームに入る',()=>{pay(Math.min(Math.max(0,S.cash),500),'入居一時金');S.home='nursing';S.house=null;mod({mental:-3});log('老人ホームに入る');return '老人ホームに入った。毎日、誰かと話ができる。';},'一時金＋年240万円'),
-  O('子どもと同居する',()=>{const k=S.kids.find(k=>k.indep&&k.close>=40);if(k){k.close+=5;S.flags.withKid=1;mod({mental:6});return `${k.name}の家で暮らすことになった。孫の声がにぎやかだ。`;}return '頼れる子どもはいなかった。';},'',S.kids.some(k=>k.indep)),
+  O('子どもと同居する',()=>{const k=S.kids.find(k=>k.alive!==false&&k.indep&&k.close>=40);if(k){k.close+=5;S.flags.withKid=1;mod({mental:6});return `${k.name}の家で暮らすことになった。孫の声がにぎやかだ。`;}return '頼れる子どもはいなかった。';},'',S.kids.some(k=>k.alive!==false&&k.indep)),
   O('ヘルパーを頼んで自宅で暮らす',()=>{S.careCost=(S.careCost||0)+60;return '週3回、ヘルパーさんが来てくれる。';}),
   O('一人で頑張る',()=>{mod({health:-5});return 'まだ大丈夫、と自分に言い聞かせた。';})]);}});
 D('yuigon',{a:[70,100],m:true,c:()=>S.age>=72&&!S.flags.yuigon&&assetsTotal()>100,mk:()=>{S.flags.yuigon=1;return E('終活','そろそろ、遺言を書いておこうか。',[
@@ -662,7 +664,7 @@ D('elder_hobby',{a:[66,95],w:3,cd:3,mk:()=>E('老後','時間がたっぷりあ�
   O('囲碁・将棋',()=>{mod({study:3,mental:5});addPerson('friend','碁会所の仲間',{age:S.age});return '碁会所に通うようになった。';}),
   O('ボランティア',()=>{mod({moral:5,mental:6});return '通学路の見守りを始めた。子どもたちに「おはよう」と言われる。';}),
   O('大学に入り直す',()=>{pay(50,'学費');mod({study:8,mental:8});return 'シニア入学で大学に通い始めた。';}),
-  O('孫の世話',()=>{S.kids.forEach(k=>{if(k.grand)k.close+=10;});mod({mental:8});return '孫の送り迎えが日課になった。';},'',S.kids.some(k=>k.grand)),
+  O('孫の世話',()=>{S.kids.forEach(k=>{if(k.grand)k.close+=10;});mod({mental:8});return '孫の送り迎えが日課になった。';},'',S.kids.some(k=>k.alive!==false&&k.grand)),
   O('家でテレビを見る',()=>{mod({health:-2});return '一日中テレビを見て過ごした。';})])});
 D('supple',{a:[65,100],w:2,cd:6,mk:()=>E('勧誘','健康食品の無料説明会に行ったら、「がんにも効く」というサプリを勧められた。年60万円。',[
   O('買う',()=>{pay(60,'健康食品');return '飲み続けたが、体は特に変わらなかった。';}),
@@ -673,7 +675,7 @@ D('spouse_old',{a:[60,100],w:2,cd:5,c:()=>S.spouse,mk:()=>E('夫婦',`${S.spouse
   O('昔の写真を一緒に見る',()=>{S.spouse.close+=12;return '笑ったり、泣いたりした。';}),
   O('熟年離婚を考える',()=>{if(S.spouse.close<30){divorce(false);return '長い結婚生活に区切りをつけた。';}return '思いとどまった。';})],W(S.spouse))});
 D('widow',{a:[50,100],m:true,c:()=>S.widow&&!S.flags.widowAsk,mk:()=>{S.flags.widowAsk=1;return E('喪失',`${S.widow}がいなくなった家は、静かすぎる。`,[
-  O('子どもの近くに引っ越す',()=>{S.kids.forEach(k=>k.close+=8);return '子どもの家の近くに引っ越した。';},'',S.kids.some(k=>k.indep)),
+  O('子どもの近くに引っ越す',()=>{S.kids.forEach(k=>k.close+=8);return '子どもの家の近くに引っ越した。';},'',S.kids.some(k=>k.alive!==false&&k.indep)),
   O('趣味の仲間と過ごす',()=>{addPerson('friend','趣味の仲間',{age:S.age});mod({mental:8});return '週に一度、仲間とお茶をするようになった。';}),
   O('再婚相手を探す',()=>{S.queue.push(evMeet('シニアの婚活パーティー'));return '新しい出会いを探すことにした。';}),
   O('一人で静かに暮らす',()=>{mod({mental:-5});return '仏壇に毎朝、話しかける。';})]);}});

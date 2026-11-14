@@ -550,21 +550,34 @@ function render(){
   $('#fInfo').innerHTML=S.ended?'':`今年の出来事<br><b>${S.queue.length?'あと'+S.queue.length+'件':'すべて答えた'}</b>`;
   ({year:rYear,people:rPeople,money:rMoney,life:rLife,dex:()=>{$('#main').innerHTML=dexHTML();}})[TAB]();
 }
+
+// ---- 家族構成に合わせて文章の「親・父・母」を直す（父がいないのに父に怒られる、などを防ぐ）----
+function famText(t){
+  if(!t||typeof t!=='string'||!S||!S.fam||S.age>=23)return t;
+  const f=S.fam,ok=p=>p&&p.alive!==false&&!p.left;const F=ok(f.father),M=ok(f.mother);
+  if(F&&M&&!S.flags.shisetsu)return t;
+  const g=S.flags.shisetsu?'施設の先生':M?'母':F?'父':ok(f.grand)?(f.grand.sex==='M'?'祖父':'祖母'):'育ての親';
+  t=t.replace(/両親/g,g);
+  if(g!=='育ての親')t=t.replace(/(?<![祖義両]|相手の|自分の子の|ひとり)親(?![戚友子密切族権指分類会孝不身し])/g,g);
+  if(!F)t=t.replace(/(?<![祖義叔伯おの])父(?![母])/g,M?'母':g);
+  if(!M)t=t.replace(/(?<![祖義叔伯お父の])母(?![親子])/g,F?'父':g);
+  return t;
+}
 function evCard(ev){
   const box=document.createElement('div');box.className='ev';
   const who=ev.who?`<div class="who">${ev.who}</div>`:'';
-  box.innerHTML=`<div class="evh"><span class="tag">${ev.tag}</span><span class="evn">${S.age}歳</span></div><div class="evb">${who}<div class="tx">${ev.tx}</div></div><div class="ops"></div>`;
-  ev.ops.forEach(o=>{if(o.c===false)return;const b=document.createElement('button');b.className='op';b.innerHTML=o.t+(o.s?`<small>${o.s}</small>`:'');b.onclick=e=>{if(e.target.dataset.i)return;
+  box.innerHTML=`<div class="evh"><span class="tag">${ev.tag}</span><span class="evn">${S.age}歳</span></div><div class="evb">${who}<div class="tx">${famText(ev.tx)}</div></div><div class="ops"></div>`;
+  ev.ops.forEach(o=>{if(o.c===false)return;const b=document.createElement('button');b.className='op';b.innerHTML=famText(o.t)+(o.s?`<small>${famText(o.s)}</small>`:'');b.onclick=e=>{if(e.target.dataset.i)return;
     S.queue.shift();S.mood='normal';let r;try{r=o.f();}catch(err){console.warn(err);r='（その間に事情が変わり、この話は立ち消えになった）';}if(r){S.notes.push(r);S.lastRes=r;}else S.lastRes=null;if(ev.log)log(o.t);render();$('#main').scrollTop=0;};box.querySelector('.ops').appendChild(b);});
   return box;
 }
 function rYear(){
   const m=$('#main');m.innerHTML='';
   if(S.ended){m.innerHTML='<div class="sec">この人生は終わった。</div>';return;}
-  if(S.prevNotes&&S.prevNotes.length){const d=document.createElement('div');d.className='sec';d.innerHTML=`<h3>前の一年の知らせ</h3>`+S.prevNotes.map(n=>`<div class="nl">■ ${n}</div>`).join('');m.appendChild(d);}
-  if(S.lastRes){const d=document.createElement('div');d.className='res';d.innerHTML=S.lastRes;m.appendChild(d);}
+  if(S.prevNotes&&S.prevNotes.length){const d=document.createElement('div');d.className='sec';d.innerHTML=`<h3>前の一年の知らせ</h3>`+S.prevNotes.map(n=>`<div class="nl">■ ${famText(n)}</div>`).join('');m.appendChild(d);}
+  if(S.lastRes){const d=document.createElement('div');d.className='res';d.innerHTML=famText(S.lastRes);m.appendChild(d);}
   if(S.queue.length){m.appendChild(evCard(S.queue[0]));return;}
-  if(S.notes.length){const d=document.createElement('div');d.className='sec';d.innerHTML=`<h3>今年のできごと</h3>`+S.notes.map(n=>`<div class="nl">■ ${n}</div>`).join('');m.appendChild(d);}
+  if(S.notes.length){const d=document.createElement('div');d.className='sec';d.innerHTML=`<h3>今年のできごと</h3>`+S.notes.map(n=>`<div class="nl">■ ${famText(n)}</div>`).join('');m.appendChild(d);}
   m.appendChild(actionsPanel());
 }
 function rPeople(){

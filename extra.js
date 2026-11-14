@@ -281,6 +281,8 @@ function mkParentLike(sx,f){const ln=S.last;return {name:ln+' '+(sx==='M'?pick(O
 // 時代の出来事（史実）
 // =====================================================================
 const G_=k=>S.gift===k, C_=k=>S.conds&&S.conds.includes(k), PJ_=n=>S.pj&&S.pj.includes(n);
+// その職業の親（生きていて家にいる人）と、その呼び方
+const PJP_=n=>parents().find(p=>p.job===n&&p.alive!==false&&!p.left), PJL_=n=>{const p=PJP_(n);return p?(p.sex==='M'?'父':'母'):'親';};
 D('h_tdl',{a:[3,14],y:[1983,1984],w:6,mk:()=>E('1983年','千葉に「東京ディズニーランド」ができた。クラスの話題はそればかりだ。',[
   O('親に連れて行ってとせがむ',()=>{if(S.fam.rank>=2){mod({mental:8});livingParents().forEach(p=>p.close+=6);return '開園してすぐ、家族で行った。一生忘れない一日になった。';}mod({mental:-3});return '「うちにはそんなお金はない」と言われた。';}),
   O('友達の話を聞くだけにする',()=>{mod({comm:2});return 'お土産のクッキーを一枚もらった。';})])});
@@ -448,14 +450,14 @@ D('c_fuun',{a:[6,90],w:4,cd:3,c:()=>C_('fuun'),mk:()=>E('不運',pick(['横断�
 // =====================================================================
 D('p_doctor',{a:[14,17],m:true,c:()=>PJ_('医師')&&!S.flags.pdoc,mk:()=>{S.flags.pdoc=1;return E('家業','「医者になって、病院を継ぎなさい」。物心ついた時から言われてきた。',[
   O('医学部を目指す',()=>{S.flags.medAim=1;mod({study:10,mental:-6});famMoneyAdj(-4);return '医学部専門の予備校に入れられた。';}),
-  O('自分の夢を追うと言う',()=>{livingParents().forEach(p=>p.close-=12);mod({mental:4});return '父は口をきいてくれなくなった。';})]);}});
-D('p_shacho',{a:[26,42],m:true,c:()=>PJ_('会社経営者')&&!S.flags.pshacho&&S.fam.alive!==false,mk:()=>{S.flags.pshacho=1;return E('事業承継','父の会社を継いでほしい、と頼まれた。社員は50人。業績は悪くない。',[
+  O('自分の夢を追うと言う',()=>{livingParents().forEach(p=>p.close-=12);mod({mental:4});return `${PJL_('医師')}は口をきいてくれなくなった。`;})]);}});
+D('p_shacho',{a:[26,42],m:true,c:()=>PJ_('会社経営者')&&PJP_('会社経営者')&&!S.flags.pshacho&&S.fam.alive!==false,mk:()=>{S.flags.pshacho=1;return E('事業承継',PJL_('会社経営者')+'の会社を継いでほしい、と頼まれた。社員は50人。業績は悪くない。',[
   O('社長を継ぐ',()=>{S.company={value:8000,eq:.6,yrs:0,joined:1};setJob('ceo',1200);log('家業の会社を継ぐ');return '二代目社長になった。古参の役員の視線が冷たい。';}),
   O('断って自分の道を行く',()=>{livingParents().forEach(p=>p.close-=8);return '会社は他人に売られることになった。';})]);}});
-D('p_sushi',{a:[18,35],m:true,c:()=>PJ_('寿司屋の大将')&&!S.flags.psushi,mk:()=>{S.flags.psushi=1;return E('家業','「店を継ぐ気はあるか」。父が、カウンター越しに聞いてきた。',[
+D('p_sushi',{a:[18,35],m:true,c:()=>PJ_('寿司屋の大将')&&PJP_('寿司屋の大将')&&!S.flags.psushi,mk:()=>{S.flags.psushi=1;return E('家業','「店を継ぐ気はあるか」。'+PJL_('寿司屋の大将')+'が、カウンター越しに聞いてきた。',[
   O('修行して店を継ぐ',()=>{S.shop={yrs:0,kind:'寿司屋',loss:0};setJob('shop',0);mod({skill:8});log('寿司屋を継ぐ');return '包丁の握り方から、もう一度教わった。';}),
-  O('継がない',()=>'のれんは、父の代で下ろされることになった。')]);}});
-D('p_seijika',{a:[30,45],m:true,c:()=>PJ_('国会議員')&&!S.flags.pseiji,mk:()=>{S.flags.pseiji=1;return E('地盤','父が引退する。「地盤・看板・カバン」を継いで、次の選挙に出ないかと後援会が言ってきた。',[
+  O('継がない',()=>'のれんは、'+PJL_('寿司屋の大将')+'の代で下ろされることになった。')]);}});
+D('p_seijika',{a:[30,45],m:true,c:()=>PJ_('国会議員')&&PJP_('国会議員')&&!S.flags.pseiji,mk:()=>{S.flags.pseiji=1;return E('地盤',PJL_('国会議員')+'が引退する。「地盤・看板・カバン」を継いで、次の選挙に出ないかと後援会が言ってきた。',[
   O('出馬する',()=>{if(chance(.7)){setJob('giin');log('世襲で国会議員に当選');S.mood='happy';return '当選した。「世襲だ」という批判も聞こえた。';}mod({mental:-10});return 'まさかの落選。';}),
   O('政治の世界には入らない',()=>'後援会はひどく落胆した。')]);}});
 D('p_geino',{a:[5,12],m:true,c:()=>PJ_('芸能人')&&!S.flags.pgeino,mk:()=>{S.flags.pgeino=1;return E('二世','親の番組に一緒に出ないか、と誘われた。',[
