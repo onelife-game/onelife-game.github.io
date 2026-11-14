@@ -43,7 +43,7 @@ const ACTS=[
  {id:'mago',n:'孫にお小遣いをあげる',c:5,a:[50,100],d:'子や孫が喜ぶ',c2:()=>S.kids.some(k=>k.grand),f:()=>{S.kids.forEach(k=>{if(k.grand)k.close+=10;});mod({mental:6});return '孫が「ありがとう」と抱きついてきた。';}},
  {id:'hobby',n:'趣味の教室に通う',c:10,a:[55,95],d:'メンタル+8・友人ができる',f:()=>{mod({mental:8});if(chance(.5))addPerson('friend','趣味の仲間');return pick(['陶芸教室に通い始めた。','囲碁会所で友達ができた。','社交ダンスを始めた。']);}},
 ];
-function actCost(a){return typeof a.c==='function'?a.c(S):a.c;}
+function actCost(a){const c=typeof a.c==='function'?a.c(S):a.c;return priceOf(a,c);}
 function actionsPanel(){
   const wrap=document.createElement('div');
   const a=S.age;
@@ -56,14 +56,15 @@ function actionsPanel(){
     s.querySelectorAll('#sLf button').forEach(b=>b.onclick=()=>{S.life=+b.dataset.v;render();});
     wrap.appendChild(s);
   }
-  const av=ACTS.filter(x=>a>=x.a[0]&&a<=x.a[1]&&(!x.c2||x.c2()));
+  const av=yearOffer(ACTS.filter(x=>a>=x.a[0]&&a<=x.a[1]&&(!x.c2||x.c2())));
   if(av.length){
     const s=document.createElement('div');s.className='sec';s.innerHTML=`<h3>お金を使う<span>それぞれ年に1回まで</span></h3><div class="acts"></div>`;
     const g=s.querySelector('.acts');
-    av.forEach(x=>{const c=actCost(x);const b=document.createElement('button');b.className='act'+(S.used[x.id]?' done':'');b.disabled=!!S.used[x.id]||S.cash<c;b.innerHTML=`${x.n}<span class="c">${c?yen(c):'無料'}</span><small>${x.d}</small>`;
-      b.onclick=()=>{if(S.used[x.id])return;if(S.cash<c){toast('お金が足りない');return;}S.used[x.id]=1;if(c)pay(c,x.n);const r=x.f();if(r){S.notes.push(r);S.lastRes=r;}render();$('#main').scrollTop=0;};g.appendChild(b);});
+    av.forEach(x=>{const c=actCost(x);const b=document.createElement('button');b.className='act'+(S.used[x.id]?' done':'');b.disabled=!!S.used[x.id]||S.cash<c;b.innerHTML=`${x.n}<span class="c">${c?yen(c):'無料'}</span>${priceTag(x)}<small>${x.d}</small>${fateTag(x)}`;
+      b.onclick=()=>{if(S.used[x.id])return;if(S.cash<c){toast('お金が足りない');return;}S.used[x.id]=1;if(c)pay(c,x.n);const r=fateTwist(x,x.f());if(r){S.notes.push(r);S.lastRes=r;}render();$('#main').scrollTop=0;};g.appendChild(b);});
     wrap.appendChild(s);
   }
+  {const cs=chanceSection();if(cs)wrap.appendChild(cs);}
   const sh=SHEETS.filter(x=>a>=x.a[0]&&a<=x.a[1]&&(!x.c2||x.c2()));
   if(sh.length){const s=document.createElement('div');s.className='sec';s.innerHTML=`<h3>人生を動かす</h3><div class="acts"></div>`;const g=s.querySelector('.acts');
     sh.forEach(x=>{const b=document.createElement('button');b.className='act';b.innerHTML=`${x.n}<small>${x.d}</small>`;b.onclick=x.f;g.appendChild(b);});wrap.appendChild(s);}

@@ -406,9 +406,7 @@ function nextYear(){
   const N=S.notes;
   // ---- 子ども時代 ----
   if(S.age<15){
-    const allow=[0,0,0,0,0,0,.6,.6,1,1,1.2,1.2,2.4,3,3.6][S.age]*[.4,.7,1,1.5,3][S.fam.rank];
-    const otoshi=S.age>=3?[.3,.6,1.5,3,6][S.fam.rank]*(S.fam.grand||chance(.7)?1:.5):0;
-    if(allow+otoshi>0){S.cash+=allow+otoshi;row('お小遣い・お年玉',allow+otoshi);}
+    kidIncome(); // random.js：家ごと・年ごとに違うお小遣いとお年玉
   }else{
     // ---- 収入 ----
     const jg=jobIncome(),side=(S.side||0)+(S.baito||0),gross=jg+side;S.totalGross+=gross;
