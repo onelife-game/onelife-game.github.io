@@ -35,10 +35,14 @@ const ITEMS={
  bow:{n:'弓ギリ式火おこし器',d:'弓と棒で摩擦熱をつくる。根気がいる'},
  bamboocup:{n:'竹筒',d:'水を入れて火にかければ煮沸できる'},
  smoked:{n:'燻製の魚',d:'煙でいぶした魚。腐りにくい'},
+ meat:{n:'野ブタの肉',d:'大きな肉。必ず火を通すこと'},
+ banana:{n:'バナナ',d:'島に自生していた。そのまま食べられる'},
+ herb:{n:'薬草',d:'熱を下げる効果がある……と、手記に書いてあった'},
+ page:{n:'手記のページ',d:'前にこの島にいた誰かの日記'},
  obsidian:{n:'黒曜石',d:'火山のガラス。割れ口はとても鋭い'},
  bandage:{n:'包帯',d:'救急セットに入っていた。傷の手当てに'},
 };
-const FOOD={smoked:{f:20},fish:{f:22,raw:.25,cook:true},crab:{f:12,raw:.35,cook:true},clam:{f:8,raw:.4,cook:true},coconut:{f:8,w:7},fruit:{f:10,w:3,risk:.3},mushroom:{f:6,risk:.5},seaweed:{f:5,w:-4},crabbig:{f:30,raw:.3,cook:true},egg:{f:14,raw:.1,cook:false},snack:{f:15}};
+const FOOD={herb:{f:1},smoked:{f:20},meat:{f:35,raw:.45,cook:true},banana:{f:12,w:2},fish:{f:22,raw:.25,cook:true},crab:{f:12,raw:.35,cook:true},clam:{f:8,raw:.4,cook:true},coconut:{f:7,w:6},fruit:{f:10,w:3,risk:.3},mushroom:{f:6,risk:.5},seaweed:{f:5,w:-4},crabbig:{f:30,raw:.3,cook:true},egg:{f:14,raw:.1,cook:false},snack:{f:15}};
 const RECIPES=[
  {id:'knife',n:'石のナイフ',need:{stone:2},d:'石を打ち欠いて刃をつくる',give:'knife'},
  {id:'oknife',n:'黒曜石のナイフ',need:{obsidian:1,vine:1},d:'黒曜石の鋭い刃。ツルで柄を巻く',give:'knife'},
@@ -61,7 +65,7 @@ const RECIPES=[
 const LOCS={
  camp:{g:'流木・繊維・ココナッツ・漂着物',n:'浜辺（キャンプ）',d:'流れ着いた浜。漂着物が打ち上がる',x:46,y:92,far:0,acts:['beach','craft','fire','rest','raft']},
  rocks:{g:'カニ・貝・海藻・石',n:'岩場',d:'カニ・貝・海藻。魚もいる。足元のサンゴは鋭い',x:112,y:70,far:1,acts:['rocks','fish','rest']},
- jungle:{g:'ヤシの葉・ツル・枯れ枝・竹・果実',n:'森',d:'ヤシの葉・ツル・竹・果実。奥へ行くほど何かある',x:58,y:66,far:1,acts:['jungle','rest']},
+ jungle:{g:'ヤシの葉・ツル・枯れ枝・竹・果実',n:'森',d:'ヤシの葉・ツル・竹・果実。奥地へ進むほど、めずらしいものと危険が増える',x:58,y:66,far:1,acts:['jungle','deep','rest']},
  hill:{g:'見張り',n:'丘',d:'島で一番高い場所。船や飛行機を見つけやすい',x:66,y:36,far:2,acts:['hill','rest']},
  ne:{n:'？ 北東の森',d:'うっそうとして先が見えない。水の音がする気がする',x:92,y:28,far:2,acts:['explore_ne'],fog:'ne'},
  w:{n:'？ 西の崖',d:'切り立った崖のほう。まだ行ったことがない',x:22,y:42,far:2,acts:['explore_w'],fog:'w'},
@@ -72,7 +76,28 @@ const LOCS={
  reef:{g:'魚・貝',n:'サンゴの浅瀬',d:'色とりどりの魚がいる。毒のある魚やクラゲも',x:95,y:96,far:1,acts:['reef_fish','reef','rest']},
  wreck:{g:'シート・缶・ロープ・釣り糸',n:'難破船',d:'古い船の残骸。使えるものが残っているかも',x:49,y:12,far:2,acts:['wreck','rest']},
 };
-const WHERE={wood:'浜辺',branch:'森',leaf:'森',vine:'森',bamboo:'森（刃物が必要）',stone:'岩場・西の崖',fiber:'浜辺・森',tarp:'浜辺（まれ）・難破船',line:'浜辺（まれ）・難破船',can:'浜辺・難破船',bottle:'浜辺・難破船',rope:'浜辺（まれ）・難破船',obsidian:'丘（火山の島）',shell:'浜辺・岩場',bag:'浜辺（まれ）'};
+const FEATS={
+ falls:{n:'滝',g:'真水',d:'岩肌を流れ落ちる澄んだ水。流れている水は、たまり水より安全なことが多い',acts:['falls','rest']},
+ nest:{n:'海鳥の営巣地',g:'卵',d:'崖の上に海鳥が集まっている。親鳥は気が荒い',acts:['nest','rest']},
+ hut:{n:'古い小屋',g:'古い道具・手記',d:'誰かが昔、ここで暮らしていたらしい',acts:['hut','rest']},
+ swamp:{n:'毒の沼',g:'薬草',d:'じめじめした沼地。薬草が生えるが、ヒルと蚊が多い',acts:['herb','rest']},
+ pigs:{n:'野ブタの林',g:'肉',d:'野生のブタの足跡がある。銛があれば狩れるかもしれない',acts:['hunt','rest']},
+ banana:{n:'バナナの群生',g:'バナナ',d:'野生のバナナが実っている',acts:['banana','rest']},
+};
+const FSLOT=[{x:40,y:28},{x:84,y:58},{x:38,y:72}];
+const PAGES=[
+ {t:'1ページ目',b:'1994年5月2日。ヨット「かもめ号」は嵐で沈んだ。私は南雲。この島に流れ着いて3日目。この日記を、いつか誰かが読むだろうか。'},
+ {t:'2ページ目',b:'北東の森の奥で、水の音を聞いた。行ってみる価値はある。渇きは、何よりも先に人を殺す。',hint:'ne'},
+ {t:'3ページ目',b:'赤い小さな実を食べて、一晩じゅう吐いた。黄色い実は大丈夫だった。見たことのない実は、少しだけかじって半日待つこと。',hint:'fruit'},
+ {t:'4ページ目',b:'夕焼けがやけに赤い日の翌日は、決まって海が荒れる。そういう日は、屋根をツルでしばっておく。',hint:'storm'},
+ {t:'5ページ目',b:'7日に一度、昼ごろに、丘の上を小さな飛行機が通る。手を振ったが、気づかれなかった。もっと大きな印がいる。',hint:'plane'},
+ {t:'6ページ目',b:'夕方の浅瀬には、サメが入ってくる。魚を突くなら朝のうちに。',hint:'shark'},
+ {t:'7ページ目',b:'竹とツルで、いかだを組んだ。海鳥が帰っていく方角に、島影が見えた気がする。水を4リットル、保存できる食べ物を積んでいく。',hint:'raft'},
+ {t:'最後のページ',b:'明日の朝、西風が吹いたら出る。もし、これを読んでいる人がいたら——どうか、生きのびてほしい。この島は、思っているより優しい。　南雲',hint:'last'},
+];
+const SKILLS={gather:{n:'採集'},fish:{n:'漁'},fire:{n:'火'},craft:{n:'工作'},explore:{n:'探検'}};
+const LV=[0,3,8,15,25];
+const WHERE={wood:'浜辺',branch:'森',leaf:'森',vine:'森',bamboo:'森（刃物が必要）',stone:'岩場・西の崖',fiber:'浜辺・森',tarp:'浜辺（まれ）・難破船',line:'浜辺（まれ）・難破船',can:'浜辺・難破船',bottle:'浜辺・難破船',rope:'浜辺（まれ）・難破船・古い小屋',obsidian:'丘（火山の島）',shell:'浜辺・岩場',bag:'浜辺（まれ）',meat:'野ブタの林',banana:'バナナの群生',herb:'毒の沼'};
 const ISLANDS={
  coral:{n:'サンゴ礁の小島',d:'まわりを広いサンゴの浅瀬が囲む。魚は多いが、毒のある魚も多い',spring:.5,cave:.5},
  volcano:{n:'火山の島',d:'島の真ん中に小さな火口。石と黒曜石が豊富で、湧き水も見つかりやすい',spring:.75,cave:.75},

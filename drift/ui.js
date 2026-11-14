@@ -2,7 +2,7 @@
 // 漂流30日 画面（昼：島マップ／夜：焚き火とカード）
 // =====================================================================
 const IMG='img/';
-const ICONS=['smoked','obsidian','diary','bed','coconut','bamboo','wood','branch','leaf','vine','stone','fiber','fish','crab','crabbig','clam','shell','fruit','egg','canteen','fire','map','moon','pot','bandage','tool','eye'];
+const ICONS=['page','meat','banana','herb','dog','smoked','obsidian','diary','bed','coconut','bamboo','wood','branch','leaf','vine','stone','fiber','fish','crab','crabbig','clam','shell','fruit','egg','canteen','fire','map','moon','pot','bandage','tool','eye'];
 const ALIAS={oknife:'obsidian',knife:'tool',multitool:'tool',spear:'tool',rod:'tool',bow:'tool',bottle:'canteen',bamboocup:'canteen',can:'pot',seaweed:'leaf',mushroom:'fruit',rope:'vine',line:'vine',tarp:'leaf',bag:'pot',snack:'fruit',lighter:'fire',phone:'eye'};
 const icon=(k,sz=32)=>(k=ICONS.includes(k)?k:ALIAS[k]||k,ICONS.includes(k))?`<img class="px" src="${IMG}i_${k}.png" width="${sz}" height="${sz}" alt="">`:`<span class="dot" style="width:${sz}px;height:${sz}px"></span>`;
 const pct=(v,t)=>(v/t*100).toFixed(2)+'%';
@@ -28,14 +28,15 @@ function chipsHTML(){
   const c=[];if(S.sick)c.push({diarrhea:'下痢',fever:'発熱',cig:'シガテラ中毒'}[S.sick.type]);if(S.wound)c.push(S.wound.inf?'傷が化膿':'ケガ');if(S.wet)c.push('濡れている');if(S.water<20)c.push('ひどい渇き');if(S.food<15)c.push('空腹');
   return `<span class="wt">安全な水 <b>${S.stock.toFixed(1)}L</b>${S.raw>0?`・生水 ${S.raw.toFixed(1)}L`:''}</span>`+c.map(x=>`<span class="chip">${x}</span>`).join('');
 }
-const BAR=`<nav class="bar"><button data-b="drink">飲む</button><button data-b="eat">食べる</button><button data-b="inv">持ち物</button><button data-b="know">知識</button></nav>`;
-function bindBar(root){root.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{const k=b.dataset.b;if(k==='drink')drinkSheet();else if(k==='eat')eatSheet();else if(k==='inv')invSheet();else knowSheet();});}
+const BAR=`<nav class="bar"><button data-b="drink">飲む</button><button data-b="eat">食べる</button><button data-b="inv">持ち物</button><button data-b="goal">目標</button></nav>`;
+function bindBar(root){root.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{const k=b.dataset.b;if(k==='drink')drinkSheet();else if(k==='eat')eatSheet();else if(k==='inv')invSheet();else goalSheet();});}
 
 // ---------------- 描画の入口 ----------------
 function render(){
   if(!S)return;
   if(S.ended)return;
   if(S.phase==='night')renderNight();else renderDay();
+  if(S.lvUp&&S.lvUp.length&&!S.queue.length){const t=S.lvUp.splice(0);setTimeout(()=>toastBig('<b>レベルアップ！</b><br>'+t.join('<br>')),400);}
   // 出来事
   if(S.queue.length&&!document.querySelector('.ov.evov'))showEvent();
   else if(!S.queue.length&&S.morning&&S.phase==='day'&&!document.querySelector('.ov'))showMorning();
@@ -53,7 +54,7 @@ function showEvent(){
 function toastBig(t){const d=document.createElement('div');d.className='toast big';d.innerHTML=t;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
 function showMorning(){
   const m=S.morning;S.morning=null;
-  sheet(`${S.day}日目の朝`,`<div class="wxline">${wxIcon()} 今日の天気：<b>${WEATHER[S.weather].n}</b>${S.weather==='hot'?'　昼は動くと汗で水分が大きく減る':WEATHER[S.weather].rain?'　雨水をためるチャンス。でも夜が冷える':''}</div>${m.map(x=>`<div class="nl">${x}</div>`).join('')}`,[{t:S.sel!=='camp'?`「${LOCS[S.sel].n.replace('？ ','')}」へ出発する`:'島を歩く',cls:'yl',f:ov=>ov.remove()}]);
+  sheet(`${S.day}日目の朝`,`<div class="wxline">${wxIcon()} 今日の天気：<b>${WEATHER[S.weather].n}</b>${S.weather==='hot'?'　昼は動くと汗で水分が大きく減る':WEATHER[S.weather].rain?'　雨水をためるチャンス。でも夜が冷える':''}</div>${m.map(x=>`<div class="nl">${x}</div>`).join('')}`,[{t:S.sel!=='camp'?`「${LOC(S.sel).n.replace('？ ','')}」へ出発する`:'島を歩く',cls:'yl',f:ov=>ov.remove()}]);
 }
 const wxIcon=()=>'';
 
@@ -63,7 +64,7 @@ function renderDay(){
   const el=$('#day');
   const pl=places();
   const sel=pl.includes(S.sel)?S.sel:'camp';S.sel=sel;
-  const L=LOCS[sel];
+  const L=LOC(sel);
   // 時間
   const track=['朝','昼','夕'].map((t,i)=>`<div class="tk ${i<S.slot?'done':i===S.slot?'now':''}">${t}${i<S.slot?' 済':''}</div>`).join('')+`<span class="arr">▸</span><div class="tk nt">夜 焚き火</div>`;
   // 地図の上のもの
@@ -73,14 +74,15 @@ function renderDay(){
   if(!S.found.ne)ov+=`<img class="px layer" src="${IMG}fog_ne_${T}.png" alt="">`;
   if(!S.found.w)ov+=`<img class="px layer" src="${IMG}fog_w_${T}.png" alt="">`;
   if(S.found.wreck)ov+=spr('wreck',43,6,12,7);
+  [0,1,2].forEach(i=>{if(S.foundF[i])ov+=spr('f_'+S.feat[i],FSLOT[i].x-4,FSLOT[i].y-4,9,9);});
   const sh=S.b.shelter;if(sh)ov+=spr('sh'+sh,36,96-[0,7,9,12][sh],[0,10,12,14][sh],[0,7,9,12][sh]);
   ov+=spr(S.fire>0?'pit1':'pit0',49,90,5,5,S.fire>0?'flick':'');
   if(S.b.sos)ov+=spr('sos'+S.b.sos,55,93,12,6);
   if(S.b.beacon)ov+=spr('beacon',62,86,5,5);
   if(S.b.catcher||S.b.catcherLeaf)ov+=spr('catcher',29,89,6,4);
   if(S.b.raft)ov+=spr('raft',44,99,10,4);
-  const P=LOCS[S.loc];ov+=spr('player',P.x-3,P.y-9,7,10,'me');
-  const labels=pl.map(p=>{const l=LOCS[p];const below=p==='camp'||p==='wreck';const tx=l.x>108?'-88%':l.x<26?'-12%':'-50%';
+  const P=LOC(S.loc);ov+=spr('player',P.x-3,P.y-9,7,10,'me');if(S.dog)ov+=spr('dog',P.x+3,P.y-3,6,4,'me');
+  const labels=pl.map(p=>{const l=LOC(p);const below=p==='camp'||p==='wreck';const tx=l.x>108?'-88%':l.x<26?'-12%':'-50%';
     return `<button class="lab ${p===sel?'sel':''} ${l.fog?'fog':''}" data-p="${p}" style="left:${pct(l.x,130)};top:${pct(l.y+(below?7:-6),110)};transform:translate(${tx},${below?'0':'-100%'})">${l.n.replace('（キャンプ）','')}${p===S.loc?'<i>●</i>':''}</button>`;}).join('');
   const tint=S.slot===2?'dusk':S.slot===0?'dawn':'';
   const rain=WEATHER[S.weather].rain?`<div class="rain ${S.weather==='storm'?'hard':''}"></div>`:'';
@@ -93,7 +95,8 @@ function renderDay(){
   const harvest=Object.entries(S.today);
   const tip=S.day<=2&&sel==='camp'&&!S.firstFire?'<div class="tip"><b>まずは</b>：水（ヤシの実・雨水・湧き水）と火（火口になるヤシの繊維＋燃料になる枯れ枝か流木）。夜は焚き火のそばで、拾ったものから道具を作れる。</div>':'';
   el.innerHTML=`
-  <header class="dh"><div class="dn">DAY <b>${String(S.day).padStart(2,'0')}</b><small>/30</small></div><div class="wx">${wxIcon()} ${WEATHER[S.weather].n}</div></header>
+  <header class="dh"><div class="dn">DAY <b>${String(S.day).padStart(2,'0')}</b><small>/30</small></div><div class="wx">${WEATHER[S.weather].n}</div></header>
+  ${S.goal?`<div class="goal ${S.goal.done||goalOK(S.goal.id)?'ok':''}">今日の目標：${S.goal.t}${S.goal.done||goalOK(S.goal.id)?' ✔':''}</div>`:''}
   <div class="track">${track}</div>
   <div class="map">
     <img class="px layer" src="${IMG}map_${S.isl.type||'coral'}.png" alt="${ISLANDS[S.isl.type||'coral'].n}の地図">${ov}<div class="tint ${tint}"></div>${rain}${labels}
@@ -103,16 +106,39 @@ function renderDay(){
     ${res}
     <p class="pd">${L.d}</p>${late}${planned}
     <div class="gets">ここで取れる：${L.g}</div>${tip}
+    ${L.acts.some(a=>ACTS[a].e>0&&!['fire','raft','hut'].includes(a))?`<label class="push"><input type="checkbox" id="pushT" ${S.push?'checked':''}> 無理をする<small>収穫が増えるが、疲れてケガもしやすい</small></label>`:''}
     <div class="acts">${acts.map(a=>`<button class="act ${ACTS[a].e===0?'sub':''} ${a==='fire'?'fire':''}" data-a="${a}">${ACTS[a].n}<small>${a==='fire'?fireDesc():ACTS[a].d}</small></button>`).join('')}</div>
   </section>
   <section class="harv"><div class="hh"><span>今日の収穫 → 夜のカードになる</span></div><div class="chips">${harvest.length?harvest.map(([k,n])=>`<div class="hc">${icon(k,32)}<span>${ITEMS[k].n}×${n}</span></div>`).join(''):'<span class="none">まだ何もない</span>'}</div></section>
-  <section class="stat"><div class="meters">${metersHTML()}</div><div class="chips2">${chipsHTML()}</div></section>
+  <section class="stat"><div class="meters">${metersHTML()}</div><div class="chips2">${fireHTML()}${chipsHTML()}</div><div class="sks">${skillsHTML()}</div></section>
   ${BAR}`;
   el.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.p;S.lastRes='';render();});
+  const pt=el.querySelector('#pushT');if(pt)pt.onchange=()=>{S.push=pt.checked;render();};
+  el.querySelectorAll('[data-feed]').forEach(b=>b.onclick=()=>{const r=feedFire();toast(r||'くべる薪がない');render();});
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;if(a==='craft')return craftSheet();doAct(a);});
   bindBar(el);
 }
 
+function fireHTML(){
+  if(S.fire<=0)return '<span class="fm off">火：消えている</span>';
+  const can=has('wood')||has('branch');
+  return `<span class="fm">火 ${'■'.repeat(Math.min(10,S.fire))}<i>${'□'.repeat(Math.max(0,10-S.fire))}</i></span>${can?'<button class="feed" data-feed>薪をくべる</button>':''}`;
+}
+const skillsHTML=()=>Object.keys(SKILLS).map(k=>`<span class="sk">${SKILLS[k].n}<b>Lv${lv(k)}</b></span>`).join('')+(S.dog?`<span class="sk dg">${icon('dog',16)}${S.dog.n}</span>`:'');
+function nightDangers(){
+  const d=[],w=WEATHER[S.weather],burn=2+(w.rain&&shelterLv()<2?1:0);
+  if(w.rain&&shelterLv()<2)d.push(`雨で体が冷える（体力−${w.rain===2?'11〜22':'4〜10'}、熱が出ることも）→ 寝床・雨よけ・朝まで燃える火で軽くなる`);
+  if(S.fire>0&&S.fire<burn)d.push(`火が夜中に消える（朝まであと薪${burn-S.fire}）→ 薪をくべる`);
+  if(S.fire<=0&&!w.rain&&shelterLv()===0)d.push('火も寝床もない。夜は思ったより冷える');
+  if(S.wound&&!S.wound.clean)d.push('傷を洗っていない。化膿するかも（30％）→ 持ち物から傷を洗う');
+  if(S.wound&&S.wound.inf)d.push('傷が化膿している。手当てしないと体力が減り続ける');
+  if(S.water<30)d.push('のどが渇いたまま。明日の朝、さらに渇く');
+  if(S.food<25)d.push('お腹がすいている。食べてから眠ろう');
+  if(['fish','crab','crabbig','clam','meat'].some(k=>has(k)))d.push('生の魚介や肉は一晩で傷むかも → 焼いて食べるか燻製に');
+  if(S.isl.type==='mangrove'&&S.fire<=0)d.push('火がないと、蚊に刺されやすい');
+  if(S.sick)d.push('体調が悪い。よく休んで、水を飲もう');
+  return d;
+}
 function fireDesc(){
   const need=!hasTinder()||!hasFuel();
   const m=fireMethod();
@@ -128,24 +154,27 @@ function renderNight(){
   const today=S.dayRes||[];
   const notes=S.eveNotes||[];
   const cards=(S.cards||[]).map(findCard).filter(Boolean);
-  const fireTxt=S.fire>0?'■'.repeat(Math.min(5,S.fire+1))+'□'.repeat(Math.max(0,4-S.fire)):'消えている';
+  const fireTxt=S.fire>0?`${'■'.repeat(Math.min(10,S.fire))}`:'消えている';
+  const dz=nightDangers();
   const shTxt=['寝床なし','ヤシの葉の屋根','壁つきの寝床','高床の小屋'][S.b.shelter]+(S.found.cave&&S.isl.cave?'（洞窟あり）':'');
   const pc=S.pickCard;const pcard=cards.find(c=>c.id===pc);
   el.innerHTML=`
   <div class="tally"><span>${S.day}日目の夜</span><svg viewBox="0 0 61 11" preserveAspectRatio="xMinYMid meet" shape-rendering="crispEdges" role="img" aria-label="${S.day}日経過">${ticks}</svg><span>/30</span></div>
-  <div class="nscene ${WEATHER[S.weather].rain?'rainy':''}"><img class="px" src="${IMG}${S.fire>0?'night1':'night0'}.png" alt="${S.fire>0?'焚き火のそばに座る':'火のない暗い浜辺'}">${WEATHER[S.weather].rain?`<div class="rain ${S.weather==='storm'?'hard':''}"></div>`:''}${S.fire>0?'<div class="glow"></div>':''}</div>
+  <div class="nscene ${WEATHER[S.weather].rain?'rainy':''}"><img class="px" src="${IMG}${S.fire>0?'night1':'night0'}.png" alt="${S.fire>0?'焚き火のそばに座る':'火のない暗い浜辺'}">${WEATHER[S.weather].rain?`<div class="rain ${S.weather==='storm'?'hard':''}"></div>`:''}${S.fire>0?'<div class="glow"></div>':''}${S.dog?`<img class="px ndog" src="${IMG}dog_night.png" alt="${S.dog.n}">`:''}</div>
   <div class="ngrid">
-    <div>安全な水 <b>${S.stock.toFixed(1)}L</b></div><div>火 <b style="color:#F2A33A">${fireTxt}</b></div><div>${WEATHER[S.weather].n}・${shTxt}</div>
+    <div>安全な水 <b>${S.stock.toFixed(1)}L</b></div><div>火 <b style="color:#F2A33A">${fireTxt}</b>${S.fire>0&&(has('wood')||has('branch'))?'<button class="feed n" data-feed>くべる</button>':''}</div><div>${WEATHER[S.weather].n}・${shTxt}${S.knowNext?`<br>明日の天気：<b style="color:#FFD866">${WEATHER[S.nextW].n}</b>`:''}</div>
   </div>
   <div class="meters n">${metersHTML()}</div>
   <div class="ntext">${today.length?today.map(t=>`<div>・${t}</div>`).join(''):''}${notes.map(t=>`<div class="nn">${t}</div>`).join('')}${WEATHER[S.weather].rain&&shelterLv()<2?'<div class="nw">雨の夜に濡れたまま眠ると、南の島でも低体温症になる。</div>':''}${nearRecipes().slice(0,2).map(h=>`<div class="nh">あと${ITEMS[h.miss[0][0]].n}${h.miss[0][1]}で<b>${h.r.n.replace(/（.*?）/,'')}</b>が作れる（${WHERE[h.miss[0][0]]||'島のどこか'}）</div>`).join('')}</div>
+  ${dz.length?`<div class="danger"><b>このまま眠ると…</b>${dz.map(x=>`<div>・${x}</div>`).join('')}</div>`:'<div class="safe">今夜は、心配なことはなさそうだ。</div>'}
   <div class="ch"><b>今夜、なにをする？</b><span>${cards.length}枚から1枚</span></div>
   <div class="cards">${cards.map(c=>`<button class="card ${c.id===pc?'on':''}" data-c="${c.id}"><span class="from">${c.from}から</span>${icon(c.ic,48)}<span class="cn">${c.n}</span><span class="cd">${c.d}</span>${c.tag?`<span class="ctag">${c.tag}</span>`:''}</button>`).join('')}</div>
-  ${pcard&&pcard.plan?`<div class="planpick"><span>どこへ向かう？</span>${places().filter(p=>p!=='camp').map(p=>`<button data-pl="${p}" class="${S.planPick===p?'on':''}">${LOCS[p].n.replace('？ ','')}</button>`).join('')}</div>`:''}
+  ${pcard&&pcard.plan?`<div class="planpick"><span>どこへ向かう？</span>${places().filter(p=>p!=='camp').map(p=>`<button data-pl="${p}" class="${S.planPick===p?'on':''}">${LOC(p).n.replace('？ ','')}</button>`).join('')}</div>`:''}
   <button class="sleep" id="sleepBtn">${pcard?(pcard.plan&&!S.planPick?'行き先を選んでね':`「${pcard.n}」をして眠る`):'何もせずに眠る'}</button>
   ${BAR}`;
   el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{S.pickCard=S.pickCard===b.dataset.c?null:b.dataset.c;S.planPick=null;render();});
   el.querySelectorAll('[data-pl]').forEach(b=>b.onclick=()=>{S.planPick=b.dataset.pl;render();});
+  el.querySelectorAll('[data-feed]').forEach(b=>b.onclick=()=>{const r=feedFire();toast(r||'くべる薪がない');render();});
   $('#sleepBtn').onclick=()=>{
     if(pcard&&pcard.plan&&!S.planPick)return;
     const id=S.pickCard,pp=S.planPick;S.planPick=null;
@@ -178,6 +207,24 @@ function invSheet(){
    <h4>水</h4><p class="note">安全な水 ${S.stock.toFixed(1)}L／生水 ${S.raw.toFixed(1)}L／入れ物 ${cap().toFixed(1)}L</p>
    <h4>これまでの記録</h4><div class="lg">${S.log.slice().reverse().slice(0,40).map(l=>`<div><span>${l.d}日目</span>${l.t}</div>`).join('')}</div>`,[],ov=>{const w=ov.querySelector('#washW');if(w)w.onclick=()=>{treat();ov.remove();toast('傷を洗った');render();};});
 }
+function goalSheet(){
+  const rs=routes();
+  sheet('目標と記録',`${S.goal?`<div class="wxline">今日の目標：<b>${S.goal.t}</b>${S.goal.done||goalOK(S.goal.id)?'（達成！）':''}</div>`:''}
+   <h4>島から帰る3つの道</h4>${rs.map(r=>`<div class="route"><b>${r.n}</b><small>${r.d}</small>${r.items.map(([t,ok])=>`<div class="${ok?'ok':''}">${ok?'■':'□'} ${t}</div>`).join('')}</div>`).join('')}
+   <p class="note">救助の準備がすべてそろうと、飛行機や船に気づいてもらいやすくなる。</p>
+   <h4>技能</h4>${Object.keys(SKILLS).map(k=>{const l=lv(k),x=S.sk[k]||0,nx=LV[l]||null;return `<div class="skl"><span>${SKILLS[k].n}</span><b>Lv${l}</b><i style="width:${nx?Math.round((x-LV[l-1])/(nx-LV[l-1])*100):100}%"></i><small>${nx?`次まで${nx-x}`:'最大'}</small></div>`;}).join('')}
+   <p class="note">採集Lv3・5で収穫が増える／漁は魚がとれやすく／火はつきやすく／工作は材料が余りやすく／探検は新しい場所を見つけやすくなる。</p>
+   <h4>南雲の手記 ${S.pages.length}/${PAGES.length}</h4>${S.pages.map(i=>`<button class="op" data-pg="${i}">${PAGES[i].t}</button>`).join('')||'<p class="note">まだ見つけていない。島のどこかにあるらしい。</p>'}`,
+   [{t:'サバイバルの知識を読む',f:()=>knowSheet()}],ov=>ov.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>sheet(PAGES[b.dataset.pg].t,`<div class="page">${PAGES[b.dataset.pg].b}</div>`)));
+}
+function dexSheet(){
+  const ik=Object.keys(ITEMS),fk=Object.keys(FEATS);
+  sheet('図鑑',`<h4>アイテム ${ik.filter(k=>META.dex[k]).length}/${ik.length}</h4><div class="dex">${ik.map(k=>META.dex[k]?`<div>${icon(k,24)}<span>${ITEMS[k].n}</span></div>`:'<div class="no"><span>？？？</span></div>').join('')}</div>
+   <h4>島の名所 ${fk.filter(k=>META.feats[k]).length}/${fk.length}</h4><div class="dex">${fk.map(k=>META.feats[k]?`<div><img class="px" src="${IMG}f_${k}.png" width="24" height="24" alt=""><span>${FEATS[k].n}</span></div>`:'<div class="no"><span>？？？</span></div>').join('')}</div>
+   <h4>南雲の手記 ${Object.keys(META.pages).length}/${PAGES.length}</h4>${PAGES.map((p,i)=>META.pages[i]?`<button class="op" data-pg="${i}">${p.t}</button>`:'<div class="nl">□ ？？？</div>').join('')}
+   <h4>称号</h4>${TITLES.map(t=>`<div class="nl">${META.titles[t.id]?'■ '+t.n+'<small class="note">　'+t.d+'</small>':'□ ？？？'}</div>`).join('')}`,
+   [],ov=>ov.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>sheet(PAGES[b.dataset.pg].t,`<div class="page">${PAGES[b.dataset.pg].b}</div>`)));
+}
 function knowSheet(){
   const ks=Object.keys(INFO);
   sheet(`サバイバルの知識 ${ks.filter(k=>S.seen[k]).length}/${ks.length}`,`<p class="note">島で経験すると、本当の話が読めるようになる。</p>`,
@@ -209,6 +256,7 @@ function showEnd(){
 }
 
 // ---------------- タイトル ----------------
+const dailyLabel=()=>{const k=todayKey();return `${Math.floor(k/100)%100}/${k%100}`;};
 function title(){
   show('title');
   let hasSave=false;try{hasSave=!!localStorage.getItem(SAVE);}catch(e){}
@@ -216,19 +264,21 @@ function title(){
    <div class="timg"><img class="px" src="${IMG}title.png" alt="夕暮れの無人島と浜辺の焚き火"></div>
    <div class="ttx"><h1>漂流30日</h1><p>昼は島を歩け。夜は火を守れ。</p></div>
    <div class="tbtns">
-    <button class="tb main" id="tNew">島に上陸する</button>
+    <button class="tb main" id="tNew">島に上陸する<small>毎回ちがう島</small></button>
+    <button class="tb day" id="tDaily">今日の島に挑む<small>${dailyLabel()}　みんな同じ島${META.daily[todayKey()]?`／今日の記録 ${META.daily[todayKey()]>30?'生還':META.daily[todayKey()]+'日'}`:''}</small></button>
     ${hasSave?'<button class="tb" id="tCont">つづきから</button>':''}
-    <button class="tb" id="tRec">記録と称号<small>最長 ${META.best}日／挑戦 ${META.runs}回</small></button>
+    <button class="tb" id="tRec">図鑑と称号<small>最長 ${META.best}日／挑戦 ${META.runs}回</small></button>
    </div>
    <p class="tinfo">水・体温・食料の減り方、生水や生魚のリスク、救助のされ方は、CDCなどの公的機関の資料や実際の遭難事例をもとにしている（ゲーム用に簡略化）。</p>`;
   $('#tNew').onclick=()=>{try{localStorage.removeItem(SAVE);}catch(e){}newGame();render();};
-  if($('#tCont'))$('#tCont').onclick=()=>{try{S=JSON.parse(localStorage.getItem(SAVE));S.isl.type=S.isl.type||'coral';if(S.wreckLeft==null)S.wreckLeft=3;render();}catch(e){newGame();render();}};
-  $('#tRec').onclick=()=>sheet('記録と称号',`<p>最長生存：<b>${META.best}日</b>／挑戦：${META.runs}回</p>${TITLES.map(t=>`<div class="nl">${META.titles[t.id]?'■ '+t.n+'<small class="note">　'+t.d+'</small>':'□ ？？？'}</div>`).join('')}`);
+  $('#tDaily').onclick=()=>{try{localStorage.removeItem(SAVE);}catch(e){}newGame(todayKey());render();};
+  if($('#tCont'))$('#tCont').onclick=()=>{try{S=JSON.parse(localStorage.getItem(SAVE));RNG=S.seed&&S.rs!=null?mulberry(S.rs):Math.random;render();}catch(e){newGame();render();}};
+  $('#tRec').onclick=()=>dexSheet();
 }
 
 // ---------------- シェア ----------------
 const GAME_URL=(()=>{try{const h=location.hostname;if(/^https?:$/.test(location.protocol)&&h&&!/claude|anthropic|usercontent/.test(h))return location.origin+location.pathname.replace(/index\.html$/,'');}catch(e){}return 'https://onelife-game.github.io/drift/';})();
-function shareText(){const k=S.ended;return `無人島に漂流して、${k==='dead'?`${S.day}日目に力尽きた。死因：${DEATH[S.deathCause]||'不明'}`:k==='survive'?'30日間を生き延びた！':`${S.day}日目に救助された！`}\n称号「${S.endTitle.n}」\n#漂流30日\n${GAME_URL}`;}
+function shareText(){const k=S.ended;return `${S.seed?`【今日の島 ${Math.floor(S.seed/100)%100}/${S.seed%100}】`:''}無人島に漂流して、${k==='dead'?`${S.day}日目に力尽きた。死因：${DEATH[S.deathCause]||'不明'}`:k==='survive'?'30日間を生き延びた！':`${S.day}日目に救助された！`}\n称号「${S.endTitle.n}」\n#漂流30日\n${GAME_URL}`;}
 const loadImg=src=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});
 async function makeCard(){
   const W=1080,H=1080,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;
