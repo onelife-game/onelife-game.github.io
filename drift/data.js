@@ -34,47 +34,60 @@ const ITEMS={
  rod:{n:'釣り竿',d:'岩場から魚を釣れる'},
  bow:{n:'弓ギリ式火おこし器',d:'弓と棒で摩擦熱をつくる。根気がいる'},
  bamboocup:{n:'竹筒',d:'水を入れて火にかければ煮沸できる'},
+ smoked:{n:'燻製の魚',d:'煙でいぶした魚。腐りにくい'},
+ obsidian:{n:'黒曜石',d:'火山のガラス。割れ口はとても鋭い'},
+ bandage:{n:'包帯',d:'救急セットに入っていた。傷の手当てに'},
 };
-const FOOD={fish:{f:22,raw:.25,cook:true},crab:{f:12,raw:.35,cook:true},clam:{f:8,raw:.4,cook:true},coconut:{f:8,w:7},fruit:{f:10,w:3,risk:.3},mushroom:{f:6,risk:.5},seaweed:{f:5,w:-4},crabbig:{f:30,raw:.3,cook:true},egg:{f:14,raw:.1,cook:false},snack:{f:15}};
+const FOOD={smoked:{f:20},fish:{f:22,raw:.25,cook:true},crab:{f:12,raw:.35,cook:true},clam:{f:8,raw:.4,cook:true},coconut:{f:8,w:7},fruit:{f:10,w:3,risk:.3},mushroom:{f:6,risk:.5},seaweed:{f:5,w:-4},crabbig:{f:30,raw:.3,cook:true},egg:{f:14,raw:.1,cook:false},snack:{f:15}};
 const RECIPES=[
  {id:'knife',n:'石のナイフ',need:{stone:2},d:'石を打ち欠いて刃をつくる',give:'knife'},
- {id:'bow',n:'弓ギリ式火おこし器',need:{branch:3,vine:1},d:'弓と棒で摩擦熱をつくる',give:'bow'},
+ {id:'oknife',n:'黒曜石のナイフ',need:{obsidian:1,vine:1},d:'黒曜石の鋭い刃。ツルで柄を巻く',give:'knife'},
+ {id:'bow',n:'弓ギリ式火おこし器',need:{branch:2,vine:1},d:'弓と棒で摩擦熱をつくる',give:'bow'},
  {id:'spear',n:'銛（もり）',need:{bamboo:1},tool:true,d:'竹の先を尖らせる（刃物が必要）',give:'spear'},
  {id:'rod',n:'釣り竿',need:{bamboo:1,line:1},d:'竹に釣り糸をつける',give:'rod'},
  {id:'bamboocup',n:'竹筒',need:{bamboo:1},tool:true,d:'節を残して切る。煮沸に使える',give:'bamboocup'},
- {id:'shelter1',n:'寝床（ヤシの葉の屋根）',need:{wood:3,leaf:4},d:'夜露と日差しをしのぐ',b:'shelter',lv:1},
- {id:'shelter2',n:'寝床を強化（壁つき）',need:{wood:3,leaf:4,vine:2},d:'風と雨をかなり防げる',b:'shelter',lv:2,req:1},
+ {id:'shelter1',n:'寝床（ヤシの葉の屋根）',need:{wood:2,leaf:3},d:'夜露と日差しをしのぐ',b:'shelter',lv:1},
+ {id:'shelter2',n:'寝床を強化（壁つき）',need:{wood:2,leaf:3,vine:2},d:'風と雨をかなり防げる',b:'shelter',lv:2,req:1},
  {id:'shelter3',n:'高床の小屋',need:{bamboo:4,vine:3,leaf:4},d:'地面の湿気と虫から離れて眠れる',b:'shelter',lv:3,req:2},
  {id:'catcher',n:'雨水タンク',need:{tarp:1,wood:2},d:'雨の日に数リットルの水がたまる',b:'catcher',lv:1},
  {id:'catcher_leaf',n:'葉っぱの雨受け',need:{leaf:3,bottle:1},keep:['bottle'],d:'雨の日に少しだけ水がたまる',b:'catcherLeaf',lv:1},
+ {id:'gutter',n:'竹の雨どい',need:{bamboo:2,vine:1},tool:true,d:'竹を割って雨を集める。雨の日に水がたまる',b:'gutter',lv:1},
  {id:'still',n:'太陽熱蒸留器',need:{tarp:1,can:1},keep:['can'],d:'穴に海水を入れてシートで覆う。1日コップ1杯ほど',b:'still',lv:1},
- {id:'sos',n:'SOS文字（石）',need:{stone:12},d:'空から見える大きさで並べる',b:'sos',lv:1},
+ {id:'sos',n:'SOS文字（石）',need:{stone:8},d:'空から見える大きさで並べる',b:'sos',lv:1},
  {id:'sos2',n:'SOS文字を大きく（流木）',need:{wood:6},d:'影ができて上空から目立つ',b:'sos',lv:2,req:1},
- {id:'beacon',n:'のろし台',need:{wood:4,leaf:4,branch:2},d:'船や飛行機が見えた瞬間に火をつけられる',b:'beacon',lv:1},
+ {id:'beacon',n:'のろし台',need:{wood:3,leaf:3,branch:2},d:'船や飛行機が見えた瞬間に火をつけられる',b:'beacon',lv:1},
  {id:'raft',n:'いかだ',need:{bamboo:10,vine:8,wood:6},d:'海に出る最後の手段',b:'raft',lv:1},
 ];
 const LOCS={
- camp:{n:'浜辺（キャンプ）',d:'流れ着いた浜。漂着物が打ち上がる',x:46,y:92,far:0,acts:['beach','craft','fire','rest','raft']},
- rocks:{n:'岩場',d:'カニ・貝・海藻。魚もいる。足元のサンゴは鋭い',x:112,y:70,far:1,acts:['rocks','fish','rest']},
- jungle:{n:'森',d:'ヤシの葉・ツル・竹・果実。奥へ行くほど何かある',x:58,y:66,far:1,acts:['jungle','rest']},
- hill:{n:'丘',d:'島で一番高い場所。船や飛行機を見つけやすい',x:66,y:36,far:2,acts:['hill','rest']},
+ camp:{g:'流木・繊維・ココナッツ・漂着物',n:'浜辺（キャンプ）',d:'流れ着いた浜。漂着物が打ち上がる',x:46,y:92,far:0,acts:['beach','craft','fire','rest','raft']},
+ rocks:{g:'カニ・貝・海藻・石',n:'岩場',d:'カニ・貝・海藻。魚もいる。足元のサンゴは鋭い',x:112,y:70,far:1,acts:['rocks','fish','rest']},
+ jungle:{g:'ヤシの葉・ツル・枯れ枝・竹・果実',n:'森',d:'ヤシの葉・ツル・竹・果実。奥へ行くほど何かある',x:58,y:66,far:1,acts:['jungle','rest']},
+ hill:{g:'見張り',n:'丘',d:'島で一番高い場所。船や飛行機を見つけやすい',x:66,y:36,far:2,acts:['hill','rest']},
  ne:{n:'？ 北東の森',d:'うっそうとして先が見えない。水の音がする気がする',x:92,y:28,far:2,acts:['explore_ne'],fog:'ne'},
  w:{n:'？ 西の崖',d:'切り立った崖のほう。まだ行ったことがない',x:22,y:42,far:2,acts:['explore_w'],fog:'w'},
- spring:{n:'湧き水',d:'岩の割れ目から水が湧いている。生水なので注意',x:90,y:30,far:2,acts:['spring','rest']},
- dry:{n:'涸れた沢',d:'水の流れた跡。雨のあとだけ水がたまる',x:90,y:30,far:2,acts:['dry','rest']},
- cave:{n:'洞窟',d:'雨風をしのげる。奥は暗い',x:24,y:46,far:2,acts:['cave','rest']},
- cliff:{n:'西の崖',d:'岩だらけの崖。石はいくらでもある',x:24,y:46,far:2,acts:['cliff','rest']},
+ spring:{g:'真水（生水）',n:'湧き水',d:'岩の割れ目から水が湧いている。生水なので注意',x:90,y:30,far:2,acts:['spring','rest']},
+ dry:{g:'雨のあとの水',n:'涸れた沢',d:'水の流れた跡。雨のあとだけ水がたまる',x:90,y:30,far:2,acts:['dry','rest']},
+ cave:{g:'雨宿り・古い道具',n:'洞窟',d:'雨風をしのげる。奥は暗い',x:24,y:46,far:2,acts:['cave','rest']},
+ cliff:{g:'石',n:'西の崖',d:'岩だらけの崖。石はいくらでもある',x:24,y:46,far:2,acts:['cliff','rest']},
+ reef:{g:'魚・貝',n:'サンゴの浅瀬',d:'色とりどりの魚がいる。毒のある魚やクラゲも',x:95,y:96,far:1,acts:['reef_fish','reef','rest']},
+ wreck:{g:'シート・缶・ロープ・釣り糸',n:'難破船',d:'古い船の残骸。使えるものが残っているかも',x:49,y:12,far:2,acts:['wreck','rest']},
+};
+const WHERE={wood:'浜辺',branch:'森',leaf:'森',vine:'森',bamboo:'森（刃物が必要）',stone:'岩場・西の崖',fiber:'浜辺・森',tarp:'浜辺（まれ）・難破船',line:'浜辺（まれ）・難破船',can:'浜辺・難破船',bottle:'浜辺・難破船',rope:'浜辺（まれ）・難破船',obsidian:'丘（火山の島）',shell:'浜辺・岩場',bag:'浜辺（まれ）'};
+const ISLANDS={
+ coral:{n:'サンゴ礁の小島',d:'まわりを広いサンゴの浅瀬が囲む。魚は多いが、毒のある魚も多い',spring:.5,cave:.5},
+ volcano:{n:'火山の島',d:'島の真ん中に小さな火口。石と黒曜石が豊富で、湧き水も見つかりやすい',spring:.75,cave:.75},
+ mangrove:{n:'マングローブの島',d:'海岸をマングローブ林が覆う。カニは多いが、蚊も多い。真水は少ない',spring:.4,cave:.45},
 };
 const SLOTS=['朝','昼','夕','夜'];
 const WEATHER={sun:{n:'晴れ',heat:1},hot:{n:'猛暑',heat:2},cloud:{n:'くもり',heat:0},rain:{n:'雨',heat:0,rain:1},storm:{n:'嵐',heat:0,rain:2}};
 const BACKS=[
- {id:'office',n:'会社員',d:'特技はない。ただ、運だけはいいほうだ',luck:.06},
- {id:'scout',n:'元ボーイスカウト',d:'火おこしとロープワークが得意',fire:.25,craft:.1},
- {id:'fisher',n:'漁師',d:'魚をとるのも、毒のある魚を見分けるのも得意',fish:.3,fishTox:.6},
- {id:'nurse',n:'看護師',d:'ケガや病気の手当てができる',med:.5},
- {id:'carpenter',n:'大工',d:'少ない材料で丈夫なものを作れる',craft:.3},
- {id:'athlete',n:'元陸上部',d:'体力があり、のどが渇きにくい体',hp:15,water:.1},
- {id:'chef',n:'料理人',d:'食べられるものとそうでないものを見分けられる',food:.5},
+ {id:'office',start:'phone',n:'会社員',d:'特技はない。ただ、運だけはいいほうだ',luck:.06},
+ {id:'scout',start:'rope',n:'元ボーイスカウト',d:'火おこしとロープワークが得意',fire:.25,craft:.1},
+ {id:'fisher',start:'line',n:'漁師',d:'魚をとるのも、毒のある魚を見分けるのも得意',fish:.3,fishTox:.6},
+ {id:'nurse',start:'bandage',n:'看護師',d:'ケガや病気の手当てができる',med:.5},
+ {id:'carpenter',start:'multitool',n:'大工',d:'少ない材料で丈夫なものを作れる',craft:.3},
+ {id:'athlete',start:'bottle',n:'元陸上部',d:'体力があり、のどが渇きにくい体',hp:15,water:.1},
+ {id:'chef',start:'snack',n:'料理人',d:'食べられるものとそうでないものを見分けられる',food:.5},
 ];
 const CAUSES=[
  {id:'cruise',n:'クルーズ船から夜の海に落ちた',search:0,t:'誰も、あなたが落ちたことに気づいていない。'},
@@ -94,5 +107,9 @@ const INFO={
  alvarenga:{t:'438日の漂流',b:'エルサルバドルの漁師ホセ・アルバレンガは2012年から438日間太平洋を漂流した。生の魚、ウミガメ、海鳥、雨水で生き延び、マーシャル諸島に流れ着いた。',s:'Wikipedia・Jonathan Franklin『438 Days』'},
  shark:{t:'サメに襲われる確率',b:'国際サメ襲撃ファイル（ISAF）によると、2025年に世界で確認された「理由なくサメに噛まれた」件数は65件。めったに起きないが、血のにおいのする浅瀬は避けたほうがいい。',s:'フロリダ自然史博物館 ISAF 2025'},
  coco:{t:'ココナッツの水',b:'若いココナッツの水は約96％が水分で、カリウムなどの電解質を含む。ただし大量に飲むとお腹をこわすことがあり、これだけで水分をまかなうのは難しい。',s:'GoodRx・WebMD'},
+ fire:{t:'火のおこし方',b:'弓ギリ式は、弓のひもを木の棒に巻きつけ、上から押さえながら弓を前後に動かして摩擦熱で火種をつくる方法。手で棒を回すよりずっと効率がよい。晴れた日には、虫眼鏡や水を入れた透明な容器で日光を一点に集め、乾いた火口に火をつけることもできる。どの方法でも、よく乾いた火口と細い枝を先に用意しておくのが大事。',s:'米陸軍サバイバル教本 FM 21-76'},
+ smoke:{t:'燻製で日持ちさせる',b:'熱帯では、とった魚は数時間で傷み始める。煙でいぶしたり干したりして水分を抜くと、腐りにくくなり何日か保存できる。',s:'米陸軍サバイバル教本 FM 21-76'},
+ obsidian:{t:'黒曜石の刃',b:'黒曜石は溶岩が急に冷えてできた天然のガラス。割れ口は非常に鋭く、石器時代から世界中で刃物に使われてきた。',s:'スミソニアン国立自然史博物館など'},
+ mosquito:{t:'蚊が運ぶ病気',b:'熱帯の湿地やマングローブ林には蚊が多く、デング熱などの病気を運ぶことがある。煙には蚊を遠ざける効果がある。',s:'WHO（世界保健機関）'},
  still:{t:'太陽熱蒸留器',b:'穴に海水や植物を入れ、シートで覆って中央に重しをすると、蒸発した水がシートの裏で冷えて真水がたまる。ただし1日にとれるのはコップ1杯ほどと、ごくわずか。',s:'各国のサバイバル教本'},
 };

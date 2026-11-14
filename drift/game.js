@@ -14,17 +14,18 @@ const L2P=12; // 1リットル＝水分12ポイント
 // ---------------- はじまり ----------------
 function newGame(){
   const back=pick(BACKS),cause=pick(CAUSES),sex=chance(.5)?'M':'F';
-  const isl={spring:chance(.6),cave:chance(.6),coconut:chance(.85),wreck:chance(.35),turtle:chance(.4)};
+  const type=pick(Object.keys(ISLANDS)),IT=ISLANDS[type];
+  const isl={type,spring:chance(IT.spring),cave:chance(IT.cave),coconut:chance(type==='mangrove'?.6:.85),wreck:chance(.45),turtle:chance(type==='mangrove'?.15:.4)};
   const st=START_ITEMS.slice().sort(()=>R()-.5).slice(0,ri(1,3));
-  const inv={};st.forEach(([k,n])=>inv[k]=(inv[k]||0)+n);
+  const inv={};st.forEach(([k,n])=>inv[k]=(inv[k]||0)+n);if(back.start)inv[back.start]=(inv[back.start]||0)+1;
   S={day:1,slot:0,phase:'day',hp:100+(back.hp||0),hpMax:100+(back.hp||0),water:80,food:80,morale:70,
     sick:null,wound:null,wet:true,inv,lighter:inv.lighter?3:0,battery:inv.phone?34:0,
     stock:0,raw:0,fire:0,b:{shelter:0,catcher:0,catcherLeaf:0,still:0,sos:0,beacon:0,raft:0},
     loc:'camp',sel:'camp',weather:'sun',stormLeft:0,isl,found:{},explore:{jungle:0,beach:0,ne:0,w:0},
-    back:back.id,cause:cause.id,sex,today:{},plan:null,cards:null,pickCard:null,nightNotes:[],
+    back:back.id,cause:cause.id,ember:0,wreckLeft:3,sex,today:{},plan:null,cards:null,pickCard:null,nightNotes:[],
     log:[],notes:[],queue:[],ended:null,seen:{},stats:{drank:0,ate:0,fish:0,crafted:0,sick:0},deathCause:null,firstFire:null};
   if(inv.bottle){S.stock=.3;}
-  S.queue.push({tag:'漂着',tx:`気がつくと、砂浜にうつ伏せで倒れていた。<br>${cause.n}——そこまでは覚えている。${cause.t}<br><br>あなたは<b>${back.n}</b>。${back.d}。<br>ポケットに残っていたのは、${Object.keys(inv).map(k=>ITEMS[k].n).join('、')}。<br><br>見渡すかぎり、海と、ヤシの木と、森。人の気配はない。`,
+  S.queue.push({tag:'漂着',tx:`気がつくと、砂浜にうつ伏せで倒れていた。<br>${cause.n}——そこまでは覚えている。${cause.t}<br><br>あなたは<b>${back.n}</b>。${back.d}。<br>ポケットに残っていたのは、${Object.keys(inv).map(k=>ITEMS[k].n).join('、')}。<br><br>見渡すかぎり、海と、ヤシの木と、森。人の気配はない。<br><br>どうやらここは<b>${IT.n}</b>らしい。${IT.d}。`,
     ops:[{t:'まず、生き延びることを考える',f:()=>{info('three');return '昼は島を歩いて、ものを集める。夜は焚き火のそばで、明日に備える。まずは水だ。';}}]});
   log('無人島に漂着した');save();
 }
@@ -45,6 +46,7 @@ function places(){
   const p=['camp','rocks','jungle','hill'];
   p.push(S.found.ne?(S.isl.spring?'spring':'dry'):'ne');
   p.push(S.found.w?(S.isl.cave?'cave':'cliff'):'w');
+  p.push('reef');if(S.found.wreck)p.push('wreck');
   return p;
 }
 
@@ -72,6 +74,7 @@ function rainCollect(){
   let got=0;const c=cap();
   if(S.b.catcher)got+=w.rain===2?4:2.5;
   if(S.b.catcherLeaf)got+=w.rain===2?1.2:.8;
+  if(S.b.gutter)got+=w.rain===2?2.5:1.5;
   if(has('bottle')&&!S.b.catcher&&!S.b.catcherLeaf)got+=.4;
   if(has('tarp')&&!S.b.catcher)got+=.6;
   got=Math.min(got,Math.max(0,c-S.stock-S.raw));
@@ -106,17 +109,22 @@ function cardPool(){
   const c=[],w=WEATHER[S.weather],tod=S.today;
   const fromToday=need=>Object.keys(need).some(k=>tod[k]);
   if(S.fire>0&&has('wood'))c.push({id:'feed',n:'火を強める',ic:'fire',from:'流木',d:`朝まで火が消えない。${w.rain?'雨の寒さもやわらぐ':'夜の冷えを防ぐ'}`,tag:w.rain?'雨に強い':'',wt:w.rain?7.5:3,f:()=>{add('wood',-1);S.fire=5;S.fedTonight=true;return '流木を足して、火を大きくした。';}});
-  if(S.fire<=0&&has('fiber')&&has('branch',2))c.push({id:'light',n:'火をおこす',ic:'fire',from:'繊維・枯れ枝',d:S.lighter>0?`ライター（あと${S.lighter}回）を使う`:has('bow')?'弓ギリ式で火をおこす':'木をこすり合わせる。成功しにくい',tag:'',wt:7,f:()=>lightFire()});
+  if(S.fire<=0&&hasTinder()&&hasFuel())c.push({id:'light',n:'火をおこす',ic:'fire',from:'火口・燃料',d:S.lighter>0?`ライター（あと${S.lighter}回）を使う`:has('bow')?'弓ギリ式で火をおこす':'木をこすり合わせる。成功しにくい',tag:'',wt:7,f:()=>lightFire()});
   if(false)c.push({id:'boil',n:'生水を煮沸',ic:'pot',from:'焚き火',d:`生水${S.raw.toFixed(1)}Lを1分間沸騰させて、安全な水にする`,tag:'',wt:5,f:()=>{const v=S.raw;S.raw=0;S.stock+=v;info('boil');return `生水${v.toFixed(1)}Lを煮沸した。`;}});
   const cook=Object.keys(FOOD).filter(k=>FOOD[k].cook&&has(k));
   if(S.fire>0&&cook.length)c.push({id:'cook',n:'焼いて食べる',ic:cook.includes('fish')?'fish':'crab',from:cook.map(k=>ITEMS[k].n).slice(0,2).join('・'),d:'火を通せば、お腹をこわしにくい。満腹まで食べる',tag:'',wt:4,f:()=>{let n=0;for(const k of cook){while(has(k)&&S.food<92){eat(k,true,true);n++;}}return n?`焚き火で${n}つ焼いて食べた。`:'お腹はいっぱいだった。';}});
   if(S.wound)c.push({id:'treat',n:'傷の手当て',ic:'bandage',from:'ケガ',d:S.stock>=.2?'きれいな水で傷を洗う':'水がないので海水で洗う',tag:S.wound.inf?'化膿している':'',wt:S.wound.inf?9:7.2,f:()=>{treat();if(S.wound){S.wound.clean=true;S.wound.days=Math.max(1,S.wound.days-2);if(S.wound.inf&&chance(.5))S.wound.inf=false;}return '傷を洗い、葉で覆ってしっかり手当てした。';}});
   if(w.rain&&shelterLv()<2&&has('leaf',2))c.push({id:'guard',n:'雨よけを張る',ic:'leaf',from:'ヤシの葉',d:'今夜だけ、寝床の上に葉を重ねて雨をしのぐ',tag:'雨に強い',wt:8,f:()=>{add('leaf',-2);S.guardTonight=true;return 'ヤシの葉を重ねて、雨よけを張った。';}});
-  RECIPES.filter(r=>canCraft(r)).forEach(r=>{const k0=Object.keys(r.need)[0];
-    c.push({id:'craft_'+r.id,n:r.n.replace(/（.*?）/,''),ic:r.b==='sos'||r.id==='knife'?'stone':r.b==='shelter'?'leaf':r.id==='bamboocup'?'canteen':['spear','rod','raft'].includes(r.id)?'bamboo':'tool',from:Object.keys(r.need).map(k=>ITEMS[k].n).slice(0,2).join('・'),d:r.d,tag:fromToday(r.need)?'今日の収穫':'',wt:fromToday(r.need)?6:2.5,f:()=>{craftDo(r);return `焚き火の明かりで、${r.n}を作った。`;}});});
+  RECIPES.filter(r=>canCraft(r)).forEach(r=>{
+    c.push({id:'craft_'+r.id,n:r.n.replace(/（.*?）/,''),ic:r.b==='sos'||r.id==='knife'?'stone':r.id==='oknife'?'obsidian':r.b==='shelter'?'leaf':r.id==='bamboocup'?'canteen':['spear','rod','raft','gutter'].includes(r.id)?'bamboo':r.id==='bow'?'fire':'tool',from:Object.keys(r.need).map(k=>ITEMS[k].n).slice(0,2).join('・'),d:r.d,tag:fromToday(r.need)?'今日の収穫':'',wt:fromToday(r.need)?6:2.5,f:()=>{craftDo(r);return `焚き火の明かりで、${r.n}を作った。`;}});});
   if(S.fire>0)c.push({id:'watch',n:'夜の海を見張る',ic:'eye',from:'焚き火',d:'船の明かりが見えたら、火で合図する。寝不足になる',tag:'',wt:2,f:()=>{hurt(3,'sick');mod({morale:-2});if(chance(.05+searchP()*.6)){const p=Math.min(.7,.25+(S.b.beacon?.25:0));if(chance(p)){S.rescueBy='ship';S.pendingEnd='rescue';return '水平線に、船の明かりが見えた。火を振って叫んだ——明かりが、こちらに向きを変えた！';}mod({morale:-10});return '船の明かりが見えた。火を振ったが、明かりは遠ざかっていった。';}return '朝まで海を見ていたが、何も見えなかった。';}});
   const pl=places().filter(p=>p!=='camp');
   c.push({id:'plan',n:'明日の計画',ic:'map',from:'地図',d:'夜明けとともに出発し、朝のうちに多く集める',tag:!S.found.ne?'水の音の方へ？':'',wt:3,plan:true});
+  const raw=['fish','crab','crabbig','clam'].filter(k=>has(k));
+  if(S.fire>0&&raw.length)c.push({id:'smoke',n:'燻製にする',ic:'smoked',from:raw.map(k=>ITEMS[k].n).slice(0,2).join('・'),d:'煙でいぶして、腐りにくくする。生ものは一晩で傷むことがある',tag:'日持ち',wt:5,f:()=>{let n=0;for(const k of raw){n+=S.inv[k];delete S.inv[k];}add('smoked',n);info('smoke');return `${n}つを燻製にした。何日かもちそうだ。`;}});
+  if(S.b.shelter>=1&&has('leaf',3))c.push({id:'bed',n:'寝床を整える',ic:'bed',from:'ヤシの葉',d:'葉を厚く敷いて、今夜はぐっすり眠る',tag:'体力回復',wt:3,f:()=>{add('leaf',-3);S.hp=clamp(S.hp+14,0,S.hpMax);mod({morale:4});return '葉を敷きつめた寝床は、思ったよりやわらかかった。';}});
+  c.push({id:'diary',n:'今日を刻む',ic:'diary',from:'流木',d:'流木に今日のことを刻む。明日やることも見えてくる',tag:'気力回復',wt:S.morale<50?3:1.5,f:()=>{mod({morale:10});const h=nearRecipes()[0];return '流木に、今日のことを刻んだ。'+(h?`<br>明日は${WHERE[h.miss[0][0]]||'島'}で${ITEMS[h.miss[0][0]].n}を探そう。そうすれば${h.r.n}が作れる。`:'');}});
+  if(S.b.raft)c.push({id:'nav',n:'星で方角を読む',ic:'moon',from:'夜空',d:'星の動きから方角をつかむ。いかだの成功率が上がる',tag:'いかだ',wt:4,f:()=>{S.raftBonus=Math.min(.2,(S.raftBonus||0)+.07);return '南十字星の位置を、目に焼きつけた。';}});
   if(!w.rain&&S.morale<45)c.push({id:'stars',n:'星を見る',ic:'moon',from:'夜空',d:'満天の星を眺めて、気持ちを立て直す',tag:'気力回復',wt:4,f:()=>{mod({morale:14});return '満天の星。こんな星空は、見たことがない。';}});
   c.push({id:'sleep',n:'ぐっすり眠る',ic:'moon',from:'寝床',d:'何もせず、体を休める',tag:'体力回復',wt:1.5,f:()=>{S.hp=clamp(S.hp+8,0,S.hpMax);mod({morale:4});return '早めに横になった。';}});
   return c;
@@ -150,12 +158,15 @@ function night(){
   if(w.rain){
     if(sh>=2){msg.push('雨音を聞きながら、乾いた場所で眠れた。');}
     else{let d=w.rain===2?(sh===1?12:22):(sh===1?5:10);if(fed)d=Math.round(d*.5);else if(fireN)d=Math.round(d*.75);hurt(d,'cold');S.wet=true;mod({morale:-10});msg.push(w.rain===2?'嵐の夜。屋根が吹き飛ばされそうになり、全身ずぶ濡れで朝を待った。':'雨に打たれ、濡れたまま震えて眠った。');info('cold');
-      if(chance(fed?.12:fireN?.18:.3)&&!S.sick){S.sick={type:'fever',days:3};S.stats.sick++;msg.push('体が熱い。熱が出た。');}}
+      if(chance(fed?.1:fireN?.15:.24)&&!S.sick){S.sick={type:'fever',days:3};S.stats.sick++;msg.push('体が熱い。熱が出た。');}}
   }else{
     if(sh===0){hurt(fireN?0:4,'cold');mod({morale:fireN?-2:-6});msg.push(fireN?'焚き火のそばで、砂の上に横になった。':'砂の上で、虫に刺されながら眠った。夜は思ったより冷える。');}
     else{S.hp=clamp(S.hp+(sh>=3?10:6),0,S.hpMax);mod({morale:sh>=3?4:1});msg.push(sh>=3?'高床の小屋でぐっすり眠った。':'寝床で体を休めた。');}
     S.wet=false;
   }
+  if(S.isl.type==='mangrove'&&!S.sick&&chance(fireN?.03:.1)){S.sick={type:'fever',days:3};S.stats.sick++;info('mosquito');msg.push('蚊に何か所も刺された。翌朝、体がだるく熱っぽい。');}
+  let rot=0;for(const k of ['fish','crab','crabbig','clam']){const n=S.inv[k]||0;let r=0;for(let i=0;i<n;i++)if(chance(.4))r++;if(r){add(k,-r);rot+=r;}}
+  if(rot){msg.push(`暑さで、生の魚介が${rot}つ傷んでしまった。`);info('smoke');}
   if(chance(.18)&&(S.inv.fish||S.inv.crab||S.inv.coconut||S.inv.egg)){const k=['fish','crab','egg','coconut'].find(x=>S.inv[x]);add(k,-1);msg.push(`夜中、ヤシガニに${ITEMS[k].n}を持っていかれた。`);}
   else if(chance(.1)){mod({morale:-8});msg.push('家族の夢を見た。目が覚めると、波の音だけがした。');}
   if(S.b.still){const g=Math.min(.4,Math.max(0,cap()-S.stock-S.raw));if(g>0){S.stock+=g;msg.push(`蒸留器に${g.toFixed(2)}Lの真水がたまっていた。`);}}
@@ -175,6 +186,7 @@ function night(){
   save();render();
 }
 function rollWeather(){
+  if(S.stormNext){S.stormNext=false;S.weather='storm';return;}
   if(S.stormLeft>0){S.stormLeft--;S.weather='storm';return;}
   const r=R();S.weather=r<.3?'sun':r<.42?'hot':r<.62?'cloud':r<.93?'rain':'storm';
   if(S.weather==='storm'){S.stormLeft=chance(.4)?1:0;}
@@ -188,15 +200,16 @@ function slotEvents(){
   else if(chance(.07))S.queue.push(pick(minorEvents()));
 }
 function morningEvents(){
-  if(S.weather==='storm'&&S.b.shelter>0&&S.b.shelter<3&&chance(.5)){S.b.shelter--;S.morning.push('嵐で寝床の屋根が吹き飛んだ。');}
+  if(S.weather==='storm'&&S.b.shelter>0&&S.b.shelter<3&&chance(S.braced?.15:.5)){S.b.shelter--;S.morning.push('嵐で寝床の屋根が吹き飛んだ。');}
   if(S.weather==='storm'){S.fire=0;}
   if(S.day===2)S.queue.push({tag:'2日目',tx:'のどが渇いて目が覚めた。昨日より日差しが痛い。<br>水がなければ、人は3日ほどしかもたない。',ops:[{t:'水を探すことを最優先にする',f:()=>{info('three');info('water');return '昼の暑い時間に遠くまで歩けば、汗で水分が逃げていく。';}}]});
   if(S.day===5&&S.cause==='fishing')S.queue.push({tag:'捜索',tx:'水平線の向こうに、一瞬だけ船影が見えた気がした。<br>……捜索は、もう打ち切られたのかもしれない。',ops:[{t:'信じて待つ',f:()=>{mod({morale:-6});return '自分で何とかするしかない。';}}]});
   if(S.day===10)S.queue.push({tag:'10日目',tx:'10日が過ぎた。流木に刻んだ線が、10本になった。',ops:[{t:'あと20日。必ず生きて帰る',f:()=>{mod({morale:8});return '線の横に、もう一本、深く刻んだ。';}},{t:'もう誰も来ないのかもしれない',f:()=>{mod({morale:-10});return '波打ち際に座り込んだ。';}}]});
   if(S.day===20)S.queue.push({tag:'20日目',tx:'20日目。438日間、太平洋を漂流して生き延びた漁師の話を思い出した。',ops:[{t:'あの人に比べれば',f:()=>{mod({morale:10});info('alvarenga');return '生の魚とウミガメと雨水で、彼は生き延びた。';}}]});
   if(chance(.2)&&S.weather!=='storm')S.queue.push(pick(minorEvents()));
-  if(S.prevStorm&&chance(.7)){S.queue.push({tag:'嵐のあと',tx:'嵐の翌朝、浜にいろいろなものが打ち上げられている。',ops:[{t:'拾いに行く',f:()=>{const g=lootRoll('beach',3);return '拾ったもの：'+g;}}]});}
-  S.prevStorm=S.weather==='storm';
+  if(S.prevStorm&&chance(.3)){S.queue.push({tag:'漂着コンテナ',tx:'嵐が去った浜に、大きなコンテナが打ち上げられている。扉が少し開いている。',ops:[{t:'中を調べる',f:()=>{const g=lootRoll('wreck',4);mod({morale:8});return '中に入っていたもの：'+g;}},{t:'危ないのでやめておく',f:()=>'近づかないことにした。'}]});}
+  else if(S.prevStorm&&chance(.7)){S.queue.push({tag:'嵐のあと',tx:'嵐の翌朝、浜にいろいろなものが打ち上げられている。',ops:[{t:'拾いに行く',f:()=>{const g=lootRoll('beach',3);return '拾ったもの：'+g;}}]});}
+  S.prevStorm=S.weather==='storm';if(S.weather!=='storm')S.braced=false;
 }
 function minorEvents(){
   const a=[
@@ -205,6 +218,12 @@ function minorEvents(){
    {tag:'海鳥',tx:'海鳥の群れが、岩場の一角に集まっている。巣があるのかもしれない。',ops:[{t:'卵を探す',f:()=>{if(chance(.5)){add('egg',2);return '卵を2つ見つけた。';}hurt(4,'wound');return '親鳥につつかれた。';}},{t:'見ているだけにする',f:()=>{mod({morale:3});return '鳥の声が、少しだけ寂しさを紛らわせた。';}}]},
    {tag:'声',tx:'森の奥から、人の声のようなものが聞こえた気がした。',ops:[{t:'叫んで返事をする',f:()=>{mod({morale:-6});return '返ってきたのは、鳥の鳴き声だけだった。';}},{t:'疲れているせいだ',f:()=>{mod({morale:-2});return '耳をふさいだ。';}}]},
   ];
+  a.push({tag:'ボトルメール',tx:'波打ち際に、栓をした瓶が転がっている。中に紙が入っている。',ops:[{t:'開けて読む',f:()=>{if(!S.found.ne&&chance(.6)){S.hintNE=true;return '古い手描きの地図だった。島の北東に、水のしるしが描いてある。';}mod({morale:6});return pick(['「この手紙を拾った人へ。今日も海はきれいです」——知らない誰かの字に、少し救われた。','かすれて読めない。でも、誰かが海の向こうにいる。']);}},{t:'そのまま海に返す',f:()=>{mod({morale:2});return '瓶は波に乗って、ゆっくり離れていった。';}}]});
+  a.push({tag:'海鳥',tx:'夕暮れ、海鳥の群れがいっせいに同じ方角へ飛んでいく。',ops:[{t:'方角を覚えておく',f:()=>{S.raftBonus=Math.min(.2,(S.raftBonus||0)+.05);return '海鳥は夜、陸で休む。あの方角に島があるのかもしれない。';}},{t:'ただ見送る',f:()=>{mod({morale:3});return 'きれいな空だった。';}}]});
+  a.push({tag:'ヤシの実',tx:'ドスン、とすぐ横にヤシの実が落ちてきた。',ops:[{t:'拾う',f:()=>{add('coconut',2);return 'ヤシの実を2つ手に入れた。頭に当たらなくてよかった。';}}]});
+  a.push({tag:'台風の前ぶれ',tx:'空が不気味な赤色に染まり、生ぬるい風が吹いてきた。うねりも大きい。',ops:[{t:'寝床を補強しておく',f:()=>{S.stormNext=true;if(has('vine')){add('vine',-1);S.braced=true;return 'ツルで屋根をしばりつけた。明日は荒れそうだ。';}return '補強する材料がない。明日は荒れそうだ。';}},{t:'気のせいだと思う',f:()=>{S.stormNext=true;return '……風が、だんだん強くなってきた。';}}]});
+  if(S.isl.type==='volcano')a.push({tag:'地鳴り',tx:'足元がぐらりと揺れた。火口から、うっすら煙が上がっている。',ops:[{t:'しばらく様子を見る',f:()=>{mod({morale:-5});return '揺れはすぐにおさまった。この島は、まだ生きている。';}}]});
+  if(S.isl.type==='mangrove')a.push({tag:'蚊の群れ',tx:'夕方、マングローブのほうから蚊の群れがわいてきた。',ops:[{t:'焚き火の煙で追い払う',f:()=>{if(S.fire>0){info('mosquito');return '煙が流れると、蚊は寄ってこなくなった。';}hurt(3,'sick');return '火がない。腕じゅう刺された。';}},{t:'泥を肌に塗る',f:()=>{mod({morale:-3});return 'においはひどいが、少しはましになった。';}}]});
   if(S.isl.turtle)a.push({tag:'ウミガメ',tx:'夜明けの浜に、ウミガメの足跡が続いている。',ops:[{t:'跡をたどって卵を掘る',f:()=>{add('egg',ri(2,5));return 'ウミガメの卵を見つけた。';}},{t:'そっとしておく',f:()=>{mod({morale:4});return '命が続いていく浜だ。';}}]});
   return a;
 }
@@ -235,7 +254,7 @@ function tryRescue(kind,p){
 const ACTS={
  beach:{n:'浜辺を探す',d:'流木・漂着物・ココナッツ',e:1},
  craft:{n:'作業する',d:'道具や寝床、SOSを作る',e:1},
- fire:{n:'火をおこす',d:'繊維1と枯れ枝2が必要',e:1,c:()=>S.fire<=0},
+ fire:{n:'火をおこす',d:'火口と燃料が必要',e:1,c:()=>S.fire<=0},
  rest:{n:'休む',d:'体力と気力が戻る。昼の汗も減る',e:0},
  raft:{n:'いかだで海に出る',d:'最後の賭け',e:2,c:()=>S.b.raft},
  rocks:{n:'岩場で探す',d:'カニ・貝・海藻・石',e:1},
@@ -248,6 +267,9 @@ const ACTS={
  dry:{n:'沢を探す',d:'雨のあとなら水があるかも',e:1},
  cave:{n:'洞窟を調べる',d:'奥に何かあるかもしれない',e:1},
  cliff:{n:'石を集める',d:'石・貝殻',e:1},
+ reef_fish:{n:'素潜りで魚をとる',d:'銛があるとよくとれる。クラゲに注意',e:2},
+ reef:{n:'浅瀬で貝を拾う',d:'貝・貝殻・海藻',e:1},
+ wreck:{n:'難破船をあさる',d:'使えるものが残っているかも',e:1},
 };
 function doAct(id){
   if(S.queue.length||S.ended||S.phase!=='day')return;
@@ -266,16 +288,18 @@ function doAct(id){
      break;}
    case 'jungle':{
      S.explore.jungle++;res='見つけたもの：'+lootRoll('jungle',ri(2,3)+bonus);
-     if(S.isl.wreck&&!S.found.wreck&&S.explore.jungle>=4&&chance(.3)){S.found.wreck=true;log('古い難破船を見つけた');add('tarp');add('can',2);add('rope');res+='<br><b>森を抜けた先に、古い難破船が打ち上げられていた。</b>防水シート・空き缶・ロープを手に入れた。';}
+     if(S.isl.wreck&&!S.found.wreck&&S.explore.jungle>=4&&chance(.3)){S.found.wreck=true;log('古い難破船を見つけた');add('tarp');add('can',2);add('rope');res+='<br><b>森を抜けた北の浜に、古い難破船が打ち上げられていた！</b>防水シート・空き缶・ロープを手に入れた。地図に難破船が増えた。';}
      else if(!S.found.ne&&S.isl.spring&&chance(.3))res+='<br>北東の奥から、水の流れる音がした気がする。';
      if(chance(.1)){woundUp();res+='<br>枝で腕を切った。';}
      break;}
    case 'hill':{mod({morale:4});res=pick(['水平線を見渡した。何も見えない。','島の形がよくわかった。思ったより小さい。','遠くに雲がわいている。雨が来るかもしれない。']);
+     if(S.isl.type==='volcano'&&chance(.6)){add('obsidian');info('obsidian');res+='<br>火口のふちで、黒くて光る石——<b>黒曜石</b>を見つけた。';}
+     if(S.stormNext)res+='<br>南の空に、異様に厚い雲がわいている。明日は荒れそうだ。';
      if(chance(.12+searchP())){S.queue.push(evCraft(chance(.5)?'air':'ship'));}break;}
    case 'explore_ne':case 'explore_w':{
      const k=id==='explore_ne'?'ne':'w';S.explore[k]++;
      res='見つけたもの：'+lootRoll('jungle',ri(1,2));
-     if(chance(.35+S.explore[k]*.2+bonus*.2)){S.found[k]=true;
+     if(chance(.35+S.explore[k]*.2+bonus*.2+(k==='ne'&&S.hintNE?.35:0))){S.found[k]=true;
        if(k==='ne'){if(S.isl.spring){log('湧き水を見つけた');res+='<br><b>岩の割れ目から、水が湧き出している！</b>';}else{log('涸れた沢を見つけた');res+='<br><b>沢を見つけた。……でも、水は涸れていた。</b>';}}
        else{if(S.isl.cave){log('洞窟を見つけた');res+='<br><b>崖のふもとに洞窟を見つけた。雨風をしのげそうだ。</b>';}else{log('西の崖にたどり着いた');res+='<br><b>崖に突き当たった。洞窟はなかった。</b>';}}
        S.sel=k==='ne'?(S.isl.spring?'spring':'dry'):(S.isl.cave?'cave':'cliff');S.loc=S.sel;
@@ -287,6 +311,14 @@ function doAct(id){
    case 'dry':{if(WEATHER[S.weather].rain||S.prevStorm){const room=Math.max(0,Math.min(1,cap()-S.stock-S.raw));S.raw+=room;S.water=clamp(S.water+10,0,100);res=`雨水が沢にたまっていた。${room>0?room.toFixed(1)+'L汲んだ。':'その場で飲んだ。'}`;}else res='見つけたもの：'+lootRoll('rocks',1)+'<br>沢に水はなかった。';break;}
    case 'cave':{if(!S.found.caveLoot){S.found.caveLoot=true;add('rope');add('can');res='洞窟の奥に、誰かが昔いた跡があった。ロープと空き缶を見つけた。';}else{res='見つけたもの：'+lootRoll('rocks',1);S.hp=clamp(S.hp+4,0,S.hpMax);res+='<br>ひんやりした洞窟で、少し休んだ。';}break;}
    case 'cliff':{add('stone',ri(3,5));if(chance(.4))add('shell');res='石をたくさん集めた。';break;}
+   case 'reef_fish':{
+     const p=(has('spear')?.55:has('rod')?.35:.18)+(S.isl.type==='coral'?.12:0)+(B().fish||0)-(tired?.15:0)+bonus*.15;
+     if(chance(p)){const n=has('spear')?ri(1,3):1;add('fish',n);S.stats.fish+=n;res=`魚が${n}匹とれた。`;}else res='魚は素早く、逃げられてしまった。';
+     if(chance(.08)){hurt(6,'wound');mod({morale:-4});res+='<br>クラゲに刺された。焼けるように痛い。真水ではなく海水で洗い流した。';}
+     if(has('spear')&&chance(.04)){S.queue.push({tag:'サメ',tx:'浅瀬で魚を突いていると、背びれが近づいてきた。',ops:[{t:'すぐに岸へ上がる',f:()=>{if(chance(.85)){info('shark');return '必死で砂浜に上がった。心臓が破れそうだ。';}hurt(35,'shark');woundUp();return 'ふくらはぎを噛まれた。';}},{t:'銛で威嚇する',f:()=>{if(chance(.6)){info('shark');return 'サメは興味をなくしたように去った。';}hurt(45,'shark');woundUp();return '銛ごと腕を持っていかれそうになった。';}}]});}
+     break;}
+   case 'reef':{res='見つけたもの：'+lootRoll('reef',ri(2,3)+bonus);break;}
+   case 'wreck':{if(S.wreckLeft>0){S.wreckLeft--;res='見つけたもの：'+lootRoll('wreck',ri(2,3));if(!S.wreckLeft)res+='<br>もう、めぼしいものは残っていない。';}else{add('wood',2);res='使えるものは残っていない。板を2枚はがして持ち帰った。';}break;}
    case 'fire':{res=lightFire();break;}
    case 'rest':{S.hp=clamp(S.hp+6,0,S.hpMax);mod({morale:5});res='日陰で体を休めた。';break;}
    case 'raft':{return raftOut();}
@@ -297,12 +329,16 @@ function doAct(id){
 }
 function woundUp(){if(!S.wound){S.wound={days:4,clean:false,inf:false};}hurt(5,'wound');}
 const LOOT={
- beach:[['wood',30],['coconut',S=>S.isl.coconut?18:4],['fiber',10],['shell',10],['bottle',6],['can',5],['rope',3],['line',3],['bag',4],['tarp',1.5],['stone',8],['egg',S=>S.isl.turtle?4:0]],
+ beach:[['wood',30],['coconut',S=>S.isl.coconut?18:4],['fiber',14],['shell',10],['bottle',6],['can',5],['rope',3],['line',3],['bag',4],['tarp',1.5],['stone',8],['egg',S=>S.isl.turtle?4:0]],
  rocks:[['crab',20],['clam',22],['seaweed',16],['stone',24],['shell',10]],
- jungle:[['leaf',26],['vine',20],['branch',22],['fiber',12],['bamboo',S=>hasCutter()?16:0],['coconut',S=>S.isl.coconut?20:3],['fruit',8],['mushroom',5],['crabbig',3]],
+ reef:[['clam',24],['shell',18],['seaweed',12],['crab',8],['fish',6]],
+ wreck:[['tarp',10],['can',18],['rope',14],['line',12],['bottle',16],['wood',18],['bag',8]],
+ jungle:[['leaf',26],['vine',20],['branch',22],['fiber',16],['bamboo',S=>hasCutter()?16:0],['coconut',S=>S.isl.coconut?20:3],['fruit',8],['mushroom',5],['crabbig',3]],
 };
+const ISL_MOD={volcano:{rocks:{stone:20},jungle:{fruit:6,bamboo:-4}},mangrove:{rocks:{crab:22,clam:10},beach:{coconut:-8,wood:6},jungle:{crabbig:6,fiber:-4}},coral:{beach:{shell:8},rocks:{clam:6}}};
 function lootRoll(where,n){
-  const tab=LOOT[where].map(([k,w])=>[k,typeof w==='function'?w(S):w]).filter(x=>x[1]>0);
+  const md=(ISL_MOD[S.isl.type]||{})[where]||{};
+  const tab=LOOT[where].map(([k,w])=>[k,Math.max(0,(typeof w==='function'?w(S):w)+(md[k]||0))]).filter(x=>x[1]>0);
   const tot=tab.reduce((a,x)=>a+x[1],0);const got={};
   for(let i=0;i<Math.max(1,n);i++){let r=R()*tot;for(const [k,w] of tab){r-=w;if(r<=0){got[k]=(got[k]||0)+(['wood','leaf','branch','stone','vine'].includes(k)?ri(1,2):k==='coconut'?ri(1,3):1);break;}}}
   for(const k in got)add(k,got[k]);
@@ -311,17 +347,29 @@ function lootRoll(where,n){
 function lightFire(){
   if(S.fire>0){if(has('wood')){add('wood',-1);S.fire+=3;return '火に流木をくべた。';}return 'もう火は燃えている。';}
   if(WEATHER[S.weather].rain&&!(S.found.cave||S.b.shelter>=2))return '雨で、火をおこせる乾いた場所がない。';
-  if(!has('fiber')||!has('branch',2))return '火口（ヤシの繊維）と枯れ枝が2本必要だ。';
-  add('fiber',-1);add('branch',-2);
-  let p=0,how='';
-  if(S.lighter>0){S.lighter--;p=.9;how='ライター';}
-  else if(has('bow')){p=.3+(B().fire||0)+(S.morale>50?.1:0)-(WEATHER[S.weather].rain?.15:0);how='弓ギリ式';}
-  else{p=.06+(B().fire||0)*.5;how='木をこすり合わせる';}
-  if(chance(p)){S.fire=S.phase==='night'?2:3;mod({morale:12});if(!S.firstFire){S.firstFire=S.day;log('火をおこした');}return `${how}で火がついた！ 炎を見ると、生きている気がした。`;}
-  mod({morale:-4});return `${how}で火をおこそうとしたが、煙が出ただけだった。${how==='木をこすり合わせる'?'道具を作ったほうがいい。':''}`;
+  if(!hasTinder()||!hasFuel())return '火口（ヤシの繊維）と燃料（枯れ枝2か流木1）が必要だ。';
+  useTinder();
+  const m=fireMethod();info('fire');
+  if(m.id==='lighter')S.lighter--;
+  if(m.id==='friction'||m.id==='bow')S.ember=Math.min(100,(S.ember||0)+m.gain);
+  if(chance(m.p)||S.ember>=100){useFuel();S.ember=0;S.fire=S.phase==='night'?2:3;mod({morale:12});if(!S.firstFire){S.firstFire=S.day;log('火をおこした');}return `${m.n}で火がついた！ 炎を見ると、生きている気がした。`;}
+  mod({morale:-2});
+  return `${m.n}で火をおこそうとしたが、煙が出ただけだった（火口だけ使った）。<br>でも、コツはつかめてきた（火種 ${S.ember}％）。${m.id==='friction'?'<br><b>ヒント：</b>弓ギリ式（枯れ枝2・ツル1）を作れば、ずっとつきやすい。晴れた昼なら、水を入れたペットボトルをレンズにする手もある。':''}`;
+}
+const hasTinder=()=>has('fiber');
+const hasFuel=()=>has('branch',2)||has('wood');
+function useTinder(){add('fiber',-1);}
+function useFuel(){if(has('branch',2))add('branch',-2);else add('wood',-1);}
+function fireMethod(){
+  const sunny=['sun','hot'].includes(S.weather)&&S.phase==='day'&&S.slot===1;
+  const wet=WEATHER[S.weather].rain?.15:0;
+  if(S.lighter>0)return {id:'lighter',n:'ライター',p:.9};
+  if(sunny&&has('bottle')&&S.stock+S.raw>=.3)return {id:'lens',n:'ペットボトルのレンズ',p:.75};
+  if(has('bow'))return {id:'bow',n:'弓ギリ式',p:.35+(B().fire||0)+(S.morale>50?.1:0)-wet,gain:50};
+  return {id:'friction',n:'木をこすり合わせる',p:.1+(B().fire||0)*.5,gain:34};
 }
 function raftOut(){
-  const p=.18+(S.stock>=4?.15:0)+((S.inv.fish||0)+(S.inv.coconut||0)>=4?.07:0)+(S.weather==='sun'||S.weather==='cloud'?.08:-.1)+(B().id==='fisher'?.15:0);
+  const p=.18+(S.raftBonus||0)+(S.stock>=4?.15:0)+((S.inv.fish||0)+(S.inv.coconut||0)>=4?.07:0)+(S.weather==='sun'||S.weather==='cloud'?.08:-.1)+(B().id==='fisher'?.15:0);
   S.queue.push({tag:'出航',tx:`いかだを波打ち際に押し出す。持っている水は${S.stock.toFixed(1)}L。<br>近くの島や航路にたどり着ける保証はない。`,ops:[
    {t:'出航する',f:()=>{if(chance(p)){S.rescueBy='raft';S.queue=[];S.pendingEnd='rescue';return '3日目の朝、漁船の網が見えた——助かった！';}if(chance(.4)){S.b.raft=0;hurt(40,'sea');S.stock=0;return '高波でいかだが砕け、なんとか島に泳ぎ戻った。';}S.deathCause='sea';S.hp=0;S.pendingEnd='dead';return 'いかだは、潮に流されていった。';}},
    {t:'やめておく',f:()=>'まだ、そのときではない。'}]});
@@ -344,7 +392,7 @@ function eat(k,cooked,quiet){
   S.food=clamp(S.food+F.f*(cooked?1.2:1),0,100);if(F.w)S.water=clamp(S.water+F.w,0,100);
   if(k==='coconut'){info('coco');if((S.cocoToday=(S.cocoToday||0)+1)>4&&chance(.4)){S.sick={type:'diarrhea',days:1};msg+='食べすぎて、お腹がゆるくなった。';}}
   if(F.cook&&!cooked&&chance(F.raw*(1-(B().food||0)))){S.sick={type:'diarrhea',days:2};S.stats.sick++;msg+='生で食べたせいか、お腹をこわした。';}
-  if(k==='fish'&&chance(.06*(1-(B().fishTox||0)))){S.sick={type:'cig',days:4};S.stats.sick++;msg+='しばらくして、唇がしびれ、冷たいものが熱く感じる。シガテラ毒だ。';info('cig');}
+  if(k==='fish'&&chance((S.isl.type==='coral'?.1:.06)*(1-(B().fishTox||0)))){S.sick={type:'cig',days:4};S.stats.sick++;msg+='しばらくして、唇がしびれ、冷たいものが熱く感じる。シガテラ毒だ。';info('cig');}
   if(F.risk&&chance(F.risk*(1-(B().food||0)))){const bad=k==='mushroom'?28:14;hurt(bad,'poison');S.sick={type:'fever',days:2};msg+='ひどい吐き気。毒があったようだ。';}
   if(k==='seaweed')info('sea');
   mod({morale:cooked?4:1});
@@ -354,6 +402,7 @@ function eat(k,cooked,quiet){
 function boilAll(){if(!canBoil()||S.raw<=0)return false;const v=S.raw;S.raw=0;S.stock+=v;info('boil');return v;}
 function treat(){
   if(!S.wound)return;
+  if(has('bandage')){add('bandage',-1);S.wound.clean=true;if(S.wound.inf&&chance(.8))S.wound.inf=false;S.wound.days=Math.max(1,S.wound.days-1);return;}
   if(S.stock>=.2){S.stock-=.2;S.wound.clean=true;if(S.wound.inf&&chance(.4+(B().med||0)))S.wound.inf=false;}
   else{S.wound.clean=chance(.6);}
 }
@@ -370,6 +419,11 @@ function craft(id){
   document.querySelectorAll('.ov').forEach(o=>o.remove());
   S.lastRes=`${r.n}を作った。`;(S.dayRes=S.dayRes||[]).push(`${SLOTS[S.slot]}｜${r.n}を作った`);
   advance(1);
+}
+function nearRecipes(){
+  return RECIPES.filter(r=>!canCraft(r)&&!(r.b&&S.b[r.b]>=r.lv)&&!(r.req!=null&&S.b[r.b]!==r.req)&&!(r.give&&has(r.give))&&!(r.id==='oknife'&&!has('obsidian')))
+   .map(r=>({r,miss:Object.entries(r.need).filter(([k,n])=>!has(k,n)).map(([k,n])=>[k,n-(S.inv[k]||0)]),tool:r.tool&&!hasCutter()}))
+   .filter(x=>!x.tool&&x.miss.length===1&&x.miss[0][1]<=2).sort((a,b)=>a.miss[0][1]-b.miss[0][1]);
 }
 function canCraft(r){
   if(r.tool&&!hasCutter())return false;
