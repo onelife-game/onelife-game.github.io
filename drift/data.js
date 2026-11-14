@@ -54,13 +54,18 @@ const RECIPES=[
  {id:'raft',n:'いかだ',need:{bamboo:10,vine:8,wood:6},d:'海に出る最後の手段',b:'raft',lv:1},
 ];
 const LOCS={
- beach:{n:'浜辺',d:'キャンプ地。漂着物が打ち上がる'},
- rocks:{n:'岩場',d:'カニや貝、魚がいる。足元は鋭い'},
- jungle:{n:'ジャングル',d:'葉・ツル・竹・果実。奥には何かあるかも'},
- hill:{n:'丘の上',d:'島全体と水平線が見渡せる'},
- cave:{n:'洞窟',d:'雨風をしのげる。奥は暗い'},
+ camp:{n:'浜辺（キャンプ）',d:'流れ着いた浜。漂着物が打ち上がる',x:46,y:92,far:0,acts:['beach','craft','fire','rest','raft']},
+ rocks:{n:'岩場',d:'カニ・貝・海藻。魚もいる。足元のサンゴは鋭い',x:112,y:70,far:1,acts:['rocks','fish','rest']},
+ jungle:{n:'森',d:'ヤシの葉・ツル・竹・果実。奥へ行くほど何かある',x:58,y:66,far:1,acts:['jungle','rest']},
+ hill:{n:'丘',d:'島で一番高い場所。船や飛行機を見つけやすい',x:66,y:36,far:2,acts:['hill','rest']},
+ ne:{n:'？ 北東の森',d:'うっそうとして先が見えない。水の音がする気がする',x:92,y:28,far:2,acts:['explore_ne'],fog:'ne'},
+ w:{n:'？ 西の崖',d:'切り立った崖のほう。まだ行ったことがない',x:22,y:42,far:2,acts:['explore_w'],fog:'w'},
+ spring:{n:'湧き水',d:'岩の割れ目から水が湧いている。生水なので注意',x:90,y:30,far:2,acts:['spring','rest']},
+ dry:{n:'涸れた沢',d:'水の流れた跡。雨のあとだけ水がたまる',x:90,y:30,far:2,acts:['dry','rest']},
+ cave:{n:'洞窟',d:'雨風をしのげる。奥は暗い',x:24,y:46,far:2,acts:['cave','rest']},
+ cliff:{n:'西の崖',d:'岩だらけの崖。石はいくらでもある',x:24,y:46,far:2,acts:['cliff','rest']},
 };
-const SLOTS=['朝','昼','夕方','夜'];
+const SLOTS=['朝','昼','夕','夜'];
 const WEATHER={sun:{n:'晴れ',heat:1},hot:{n:'猛暑',heat:2},cloud:{n:'くもり',heat:0},rain:{n:'雨',heat:0,rain:1},storm:{n:'嵐',heat:0,rain:2}};
 const BACKS=[
  {id:'office',n:'会社員',d:'特技はない。ただ、運だけはいいほうだ',luck:.06},
